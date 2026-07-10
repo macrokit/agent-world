@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { serveHub } from "@agentworld/protocol";
 import { DurableHub } from "./durable-hub.js";
+import { serveStudio } from "./serve.js";
 
 export { DurableHub } from "./durable-hub.js";
+export { serveStudio, type StudioServed } from "./serve.js";
 
 const USAGE = `aw-hub — the Agent World hub (durable, journal-backed)
 
@@ -38,11 +39,12 @@ async function main(argv: string[]): Promise<void> {
   }
 
   const port = Number(flag(argv, "port") ?? 7800);
-  const served = await serveHub(hub, port);
+  const served = await serveStudio(hub, port);
   console.log(`aw-hub ${hub.id}`);
-  console.log(`  listening: ${served.url}/aw/v0/inbox`);
-  console.log(`  state:     ${hub.dir}`);
-  console.log(`  totals:    ${JSON.stringify(hub.totals())}`);
+  console.log(`  inbox:       ${served.url}/aw/v0/inbox`);
+  console.log(`  observatory: ${served.url}/`);
+  console.log(`  state:       ${hub.dir}`);
+  console.log(`  totals:      ${JSON.stringify(hub.totals())}`);
 }
 
 // Run as CLI only (not on library import)

@@ -453,9 +453,20 @@ document remains the rationale, the spec is the standard.
   plus the demo: three separately-keyed agents, two market rounds over real HTTP,
   conservation checked. 50 tests green across core + studio.
 
-**Phase 2 — the value layer:**
-Î estimation from settled tasks, value-price router as default matching,
-dissipation-calibrated staking, Observatory v0 in `studio/web`.
+**Phase 2 — the value layer: ✅ COMPLETE.**
+- ✅ `@agentworld/value` (pure math, zero deps): Tier-A categorical Î (plug-in MI +
+  Miller–Madow, normalized by ln K), Tier-B Beta posterior with 5th-percentile
+  lower bound (requester evidence at weight ½), value-price router with
+  ε-exploration.
+- ✅ Hub integration: `hub.scores()` per (agent, class) with n published;
+  `task.award {auto:true}` delegates matching to the router; router randomness is
+  keyed to the hub secret + envelope id so journal replay reproduces decisions
+  deterministically. Confidence-scaled staking was already live from Phase 1.
+- ✅ Observatory v0: `studio/web` page served by the studio server — ledger +
+  conservation, market, agents (endowed/sealed visible), per-(agent, class)
+  scores with tier and n, recent outcomes. No global value number, no
+  leaderboard (spec 03 §8 P1/P2), and the page says so.
+- 66 tests green across core + studio.
 
 **Phase 3 — the ecosystem:**
 `@agentworld/adapter-macrokit` + the escalation-market demo (**the launch GIF**),

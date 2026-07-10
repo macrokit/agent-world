@@ -1,0 +1,17 @@
+{
+  "name": "@agentworld/value",
+  "version": "0.1.0",
+  "description": "The value layer as pure math (spec 03 §5–6): Tier-A categorical Î, Tier-B Beta acceptance scores, the value-price router. Zero dependencies.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": { "node": ">=20" }
+}

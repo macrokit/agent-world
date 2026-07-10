@@ -61,9 +61,14 @@ importers:
       '@agentworld/identity':
         specifier: workspace:*
         version: link:../identity
+      '@agentworld/value':
+        specifier: workspace:*
+        version: link:../value
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+
+  packages/value: {}
 
 packages:
 

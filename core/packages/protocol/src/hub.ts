@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { canonicalize, type Keypair } from "@agentworld/identity";
+import { groupScores, routeValuePrice, scoreFor, type CapabilityScore } from "@agentworld/value";
 import { createEnvelope, verifyEnvelope, EnvelopeError } from "./envelope.js";
 import { verifyManifestChain, ManifestError } from "./manifest.js";
 import { transition, TERMINAL_STATES } from "./task.js";
@@ -81,6 +83,10 @@ const round = (n: number) => Math.round(n * 1e6) / 1e6;
 export class InMemoryHub implements HubLike {
   /** stake = κ · confidence · price (spec 03 §3.2) */
   readonly kappa: number;
+  /** published ε-exploration probability of the default router (spec 03 §6.3) */
+  readonly epsilon: number;
+  /** below this sample count a bidder is an exploration candidate */
+  readonly minSamples: number;
 
   private key: Keypair;
   private balances = new Map<string, number>();
@@ -97,9 +103,38 @@ export class InMemoryHub implements HubLike {
   readonly deliveryFailures: Array<{ to: string; envelope: string; error: string }> = [];
   private replaying = false;
 
-  constructor(key: Keypair, opts?: { kappa?: number }) {
+  constructor(key: Keypair, opts?: { kappa?: number; epsilon?: number; minSamples?: number; random?: () => number }) {
     this.key = key;
     this.kappa = opts?.kappa ?? 0.2;
+    this.epsilon = opts?.epsilon ?? 0.1;
+    this.minSamples = opts?.minSamples ?? 5;
+    this.randomOverride = opts?.random;
+  }
+
+  private randomOverride?: () => number;
+
+  /**
+   * Router randomness must be a deterministic function of the (secret) hub key
+   * and the award envelope — journal replay re-runs the router and MUST
+   * reproduce the original decision. Keyed hashing keeps it unpredictable to
+   * bidders while replay-stable. Tests may inject `random` instead.
+   */
+  private randomFor(envelopeId: string): () => number {
+    if (this.randomOverride) return this.randomOverride;
+    const secret = this.key.privateKey.export({ type: "pkcs8", format: "der" });
+    let counter = 0;
+    return () => {
+      const h = createHash("sha256").update(secret).update(envelopeId).update(String(counter++)).digest();
+      return h.readUIntBE(0, 6) / 2 ** 48;
+    };
+  }
+
+  /**
+   * Capability scores (spec 03 §5): per (agent, class) only, with `n`
+   * published — never a cross-agent aggregate (prohibitions P1/P2).
+   */
+  scores(): CapabilityScore[] {
+    return groupScores(this.samples);
   }
 
   get id(): string {
@@ -402,8 +437,26 @@ export class InMemoryHub implements HubLike {
   private async onTaskAward(env: Envelope): Promise<void> {
     const t = this.taskFor(env);
     if (env.from !== t.requester) throw new HubError("unauthorized", "only the requester awards");
-    const bidId = env.body["bid"];
-    if (typeof bidId !== "string") throw new HubError("invalid", "award body requires bid envelope id");
+
+    let bidId: string;
+    if (env.body["auto"] === true) {
+      // Requester delegates matching → the value-price router (spec 03 §6)
+      if (t.bids.size === 0) throw new HubError("rejected", "no bids to route among");
+      const verdict = routeValuePrice(
+        [...t.bids.entries()].map(([id, b]) => ({ id, server: b.envelope.from, price: b.body.price })),
+        (server, cls) => {
+          const s = scoreFor(this.samples, server, cls);
+          return { vhat: s.vhat, n: s.n };
+        },
+        t.body.class,
+        { epsilon: this.epsilon, minSamples: this.minSamples, random: this.randomFor(env.id) },
+      );
+      bidId = verdict.winner.id;
+    } else {
+      const explicit = env.body["bid"];
+      if (typeof explicit !== "string") throw new HubError("invalid", "award body requires bid envelope id or auto:true");
+      bidId = explicit;
+    }
     const bid = t.bids.get(bidId);
     if (!bid) throw new HubError("rejected", `unknown bid: ${bidId}`);
 

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent World — Observatory</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --line: #262d38;
+    --text: #dbe2ea; --dim: #8b96a5; --accent: #5fb2ff; --ok: #4cc38a; --bad: #e5734f;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; padding: 24px; }
+  h1 { font-size: 16px; font-weight: 600; letter-spacing: .04em; }
+  h1 small { color: var(--dim); font-weight: 400; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); margin: 0 0 10px; }
+  .sub { color: var(--dim); margin: 4px 0 20px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; overflow-x: auto; }
+  .wide { grid-column: 1 / -1; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 4px 10px 4px 0; white-space: nowrap; }
+  th { color: var(--dim); font-weight: 400; border-bottom: 1px solid var(--line); }
+  .id { color: var(--dim); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .accent { color: var(--accent); }
+  .bar { display: inline-block; height: 8px; background: var(--accent); border-radius: 2px; vertical-align: middle; }
+  .conserv { padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line); margin-top: 8px; }
+  footer { color: var(--dim); margin-top: 24px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>AGENT WORLD <small>· observatory</small></h1>
+  <p class="sub">per-(agent, class) scores only — there is deliberately no global value number and no leaderboard (spec 03 §8)</p>
+  <div class="grid">
+    <div class="panel"><h2>Ledger</h2><div id="ledger">loading…</div></div>
+    <div class="panel"><h2>Market</h2><div id="market">loading…</div></div>
+    <div class="panel wide"><h2>Agents</h2><div id="agents">loading…</div></div>
+    <div class="panel wide"><h2>Capability scores <span id="eps" class="id"></span></h2><div id="scores">loading…</div></div>
+    <div class="panel wide"><h2>Recent outcomes</h2><div id="outcomes">loading…</div></div>
+  </div>
+  <footer id="hubid"></footer>
+<script>
+const short = (id) => id ? id.slice(0, 18) + "…" : "";
+const fmt = (n) => Math.round(n * 1e4) / 1e4;
+
+async function refresh() {
+  let d;
+  try {
+    d = await (await fetch("/aw/v0/observatory")).json();
+  } catch { return; }
+
+  const t = d.totals;
+  const holds = Math.abs(t.balances + t.escrowed + t.burned - t.minted) < 1e-6;
+  document.getElementById("ledger").innerHTML = `
+    <table>
+      <tr><td>balances</td><td>${fmt(t.balances)}</td></tr>
+      <tr><td>escrowed</td><td>${fmt(t.escrowed)}</td></tr>
+      <tr><td>burned</td><td class="${t.burned > 0 ? "bad" : ""}">${fmt(t.burned)}</td></tr>
+      <tr><td>minted</td><td>${fmt(t.minted)}</td></tr>
+    </table>
+    <div class="conserv ${holds ? "ok" : "bad"}">conservation ${holds ? "holds ✓" : "VIOLATED ✗"}</div>`;
+
+  document.getElementById("market").innerHTML = `
+    <table>
+      <tr><td>open tasks</td><td>${d.openTasks.length}</td></tr>
+      <tr><td>settled</td><td class="ok">${d.settled}</td></tr>
+      <tr><td>failed</td><td class="${d.failed ? "bad" : ""}">${d.failed}</td></tr>
+      <tr><td>delivery failures</td><td>${d.deliveryFailures}</td></tr>
+    </table>` + (d.openTasks.length ? `<br><table><tr><th>class</th><th>budget</th><th>bids</th><th>intent</th></tr>` +
+      d.openTasks.map(o => `<tr><td class="accent">${o.class}</td><td>${o.budget}</td><td>${o.bids}</td><td class="id">${o.intent}</td></tr>`).join("") + `</table>` : "");
+
+  document.getElementById("agents").innerHTML = `
+    <table><tr><th>name</th><th>id</th><th>capabilities</th><th>balance</th><th>continuation</th><th>frame</th><th>revs</th></tr>` +
+    d.agents.map(a => `<tr>
+      <td>${a.name}</td><td class="id">${short(a.id)}</td>
+      <td class="accent">${a.capabilities.join(", ") || "—"}</td>
+      <td>${fmt(a.balance)}</td><td>${a.continuation}</td>
+      <td>${a.sealed ? "sealed" : "open"}</td><td>${a.revisions}</td></tr>`).join("") + `</table>`;
+
+  document.getElementById("eps").textContent = `· router ε=${d.epsilon}`;
+  document.getElementById("scores").innerHTML = d.scores.length ? `
+    <table><tr><th>agent</th><th>class</th><th>tier</th><th>V̂</th><th></th><th>n</th></tr>` +
+    d.scores.map(s => `<tr>
+      <td class="id">${short(s.server)}</td><td class="accent">${s.class}</td>
+      <td>${s.tier}</td><td>${fmt(s.vhat)}</td>
+      <td><span class="bar" style="width:${Math.max(2, s.vhat * 120)}px"></span></td>
+      <td class="id">${s.n}</td></tr>`).join("") + `</table>`
+    : `<span class="id">no settled tasks yet</span>`;
+
+  document.getElementById("outcomes").innerHTML = d.recentOutcomes.length ? `
+    <table><tr><th>agent</th><th>class</th><th>mode</th><th>outcome</th></tr>` +
+    d.recentOutcomes.map(o => `<tr>
+      <td class="id">${short(o.server)}</td><td class="accent">${o.class}</td><td>${o.mode}</td>
+      <td class="${o.outcome === "accepted" ? "ok" : o.outcome === "rejected" ? "bad" : ""}">${o.outcome}${o.quality !== undefined ? " q=" + o.quality : ""}</td></tr>`).join("") + `</table>`
+    : `<span class="id">none yet</span>`;
+
+  document.getElementById("hubid").textContent = "hub " + d.hub;
+}
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -29,6 +29,12 @@ export class HubClient implements HubLike {
     return (await res.json()) as TaskView[];
   }
 
+  async scores(): Promise<{ epsilon: number; minSamples: number; scores: unknown[] }> {
+    const res = await fetch(`${this.baseUrl}/aw/v0/scores`);
+    if (!res.ok) throw new HubError("rejected", `hub returned ${res.status}`);
+    return (await res.json()) as { epsilon: number; minSamples: number; scores: unknown[] };
+  }
+
   async searchAgents(query?: { capability?: string }): Promise<Manifest[][]> {
     const params = new URLSearchParams();
     if (query?.capability) params.set("capability", query.capability);

@@ -127,8 +127,10 @@ export class Agent {
     );
   }
 
-  async award(taskId: string, bidEnvelopeId: string): Promise<void> {
-    await this.requireHub().send(createEnvelope("task.award", this.key, { bid: bidEnvelopeId }, { task: taskId }));
+  /** Award a specific bid, or pass "auto" to delegate to the hub's value-price router (spec 03 §6). */
+  async award(taskId: string, bidEnvelopeId: string | "auto"): Promise<void> {
+    const body = bidEnvelopeId === "auto" ? { auto: true } : { bid: bidEnvelopeId };
+    await this.requireHub().send(createEnvelope("task.award", this.key, body, { task: taskId }));
   }
 
   async verify(taskId: string, report: VerificationReport): Promise<void> {

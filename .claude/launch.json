@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "observatory",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/private/tmp/claude-501/-Users-jameswalstonn-Documents-agent-world/d7197794-67eb-40b1-9202-1cd046ff0b89/scratchpad/seed-observatory.mjs"],
+      "port": 7800
+    }
+  ]
+}

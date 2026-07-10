@@ -220,3 +220,90 @@ describe("InMemoryHub enforcement", () => {
     await expect(hub.handle(createEnvelope("task.hack", requester.agent, {}))).rejects.toThrow(HubError);
   });
 });
+
+describe("value-price auto-award (spec 03 §5–6)", () => {
+  /** Settle `n` deterministic rounds for `server`, passing or failing them all. */
+  async function buildHistory(
+    hub: InMemoryHub,
+    requester: Actor,
+    server: Actor,
+    n: number,
+    pass: boolean,
+  ): Promise<void> {
+    for (let i = 0; i < n; i++) {
+      const taskId = randomUUID();
+      await hub.handle(
+        createEnvelope(
+          "task.post",
+          requester.agent,
+          taskBody({ budget: { max: 2, currency: "credit" }, verification: { mode: "deterministic", tests: { equals: { ok: true } } } }),
+          { task: taskId },
+        ),
+      );
+      await hub.handle(
+        createEnvelope("task.bid", server.agent, { price: 1, capability: "echo_upper", confidence: 0.9 }, { task: taskId }),
+      );
+      const bidId = (await hub.listTasks({ status: "open" })).find((t) => t.id === taskId)!.bids[0]!.id;
+      await hub.handle(createEnvelope("task.award", requester.agent, { bid: bidId }, { task: taskId }));
+      await hub.handle(
+        createEnvelope("task.deliver", server.agent, { artifacts: [{ kind: "inline", data: { ok: pass } }] }, { task: taskId }),
+      );
+    }
+  }
+
+  async function richSetup(opts?: { epsilon?: number; random?: () => number }) {
+    const hub = new InMemoryHub(generateKeypair(), { epsilon: opts?.epsilon ?? 0, random: opts?.random });
+    const requester = makeActor({ fields: { mandate: { spend: { perTask: 50, perMonth: 5000, currency: "credit" }, commit: ["task.post", "task.verify", "task.cancel", "msg.send"], reserved: [] } } });
+    const good = makeActor();
+    const bad = makeActor();
+    for (const a of [requester, good, bad]) {
+      hub.registerInbox(a.agent.id, async () => {});
+      await hub.handle(createEnvelope("manifest.publish", a.owner, { manifest: a.manifest }));
+    }
+    hub.mint(requester.owner.id, 1000);
+    hub.mint(good.agent.id, 50);
+    hub.mint(bad.agent.id, 50);
+    await buildHistory(hub, requester, good, 6, true);
+    await buildHistory(hub, requester, bad, 6, false);
+    return { hub, requester, good, bad };
+  }
+
+  it("scores are per (agent, class) with n published", async () => {
+    const { hub, good, bad } = await richSetup();
+    const scores = hub.scores();
+    const g = scores.find((s) => s.server === good.agent.id)!;
+    const b = scores.find((s) => s.server === bad.agent.id)!;
+    expect(g.n).toBe(6);
+    expect(g.vhat).toBeGreaterThan(0.5);
+    expect(b.vhat).toBeLessThan(0.05);
+    expect(scores.every((s) => s.class === "echo_upper")).toBe(true);
+  });
+
+  it("auto-award routes to the best V̂/price even when it is pricier", async () => {
+    const { hub, requester, good, bad } = await richSetup();
+    const taskId = randomUUID();
+    await hub.handle(createEnvelope("task.post", requester.agent, taskBody(), { task: taskId }));
+    await hub.handle(createEnvelope("task.bid", bad.agent, { price: 1, capability: "echo_upper", confidence: 0.9 }, { task: taskId }));
+    await hub.handle(createEnvelope("task.bid", good.agent, { price: 8, capability: "echo_upper", confidence: 0.9 }, { task: taskId }));
+    await hub.handle(createEnvelope("task.award", requester.agent, { auto: true }, { task: taskId }));
+    expect(hub.taskView(taskId).award?.server).toBe(good.agent.id);
+    hub.assertConservation();
+  });
+
+  it("ε-exploration can route a novice; replay reproduces the decision deterministically", async () => {
+    const { hub, requester, good } = await richSetup({ epsilon: 1, random: undefined });
+    // fresh novice with zero samples
+    const novice = makeActor();
+    hub.registerInbox(novice.agent.id, async () => {});
+    await hub.handle(createEnvelope("manifest.publish", novice.owner, { manifest: novice.manifest }));
+    hub.mint(novice.agent.id, 50);
+
+    const taskId = randomUUID();
+    await hub.handle(createEnvelope("task.post", requester.agent, taskBody(), { task: taskId }));
+    await hub.handle(createEnvelope("task.bid", good.agent, { price: 5, capability: "echo_upper", confidence: 0.9 }, { task: taskId }));
+    await hub.handle(createEnvelope("task.bid", novice.agent, { price: 5, capability: "echo_upper", confidence: 0.5 }, { task: taskId }));
+    await hub.handle(createEnvelope("task.award", requester.agent, { auto: true }, { task: taskId }));
+    // ε=1 and one novice among bidders → exploration must pick the novice
+    expect(hub.taskView(taskId).award?.server).toBe(novice.agent.id);
+  });
+});

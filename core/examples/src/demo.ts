@@ -113,7 +113,7 @@ export async function runDemo(log: (line: string) => void = () => {}): Promise<D
       const view = (await client.listTasks({ status: "open" })).find((t) => t.id === taskId)!;
       const bid = view.bids[0]!;
       log(`task.bid     ${opts.cls} ← price ${bid.body.price}, confidence ${bid.body.confidence} (stake ${(0.2 * bid.body.confidence * bid.body.price).toFixed(2)})`);
-      await requester.award(taskId, bid.id);
+      await requester.award(taskId, "auto"); // delegate matching to the value-price router (spec 03 §6)
       // award → accept → handler → deliver → hub-run deterministic verify → settle
       for (let i = 0; i < 60; i++) {
         const t = hub.taskView(taskId);

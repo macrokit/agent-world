@@ -55,6 +55,13 @@ export async function serveHub(hub: InMemoryHub, port = 0): Promise<Served> {
         });
         return sendJson(res, 200, tasks);
       }
+      if (req.method === "GET" && url.pathname === "/aw/v0/scores") {
+        return sendJson(res, 200, {
+          epsilon: hub.epsilon,
+          minSamples: hub.minSamples,
+          scores: hub.scores(),
+        });
+      }
       if (req.method === "GET" && url.pathname === "/aw/v0/agents") {
         const chains = await hub.searchAgents({
           capability: url.searchParams.get("capability") ?? undefined,
