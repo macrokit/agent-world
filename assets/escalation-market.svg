@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="13">
+  <title>The escalation market, live: a weak agent buys a skill from a stranger and earns with it — https://hub.macrokit.dev</title>
+  <style>
+    .txt{fill:#dbe2ea} .dim{fill:#8b96a5} .acc{fill:#5fb2ff} .ok{fill:#4cc38a} .warn{fill:#e5734f} .prompt{fill:#4cc38a}
+    #p0{opacity:0;animation:rp0 16.825s steps(1,end) infinite}@keyframes rp0{0%{opacity:0}0.892%{opacity:0}1.010%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c0{opacity:0;animation:rc0 16.825s steps(1,end) infinite}@keyframes rc0{0%{opacity:0}3.566%{opacity:0}3.685%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c1{opacity:0;animation:rc1 16.825s steps(1,end) infinite}@keyframes rc1{0%{opacity:0}3.938%{opacity:0}4.056%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c2{opacity:0;animation:rc2 16.825s steps(1,end) infinite}@keyframes rc2{0%{opacity:0}4.309%{opacity:0}4.428%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c3{opacity:0;animation:rc3 16.825s steps(1,end) infinite}@keyframes rc3{0%{opacity:0}4.681%{opacity:0}4.799%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c4{opacity:0;animation:rc4 16.825s steps(1,end) infinite}@keyframes rc4{0%{opacity:0}5.052%{opacity:0}5.171%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c5{opacity:0;animation:rc5 16.825s steps(1,end) infinite}@keyframes rc5{0%{opacity:0}5.423%{opacity:0}5.542%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c6{opacity:0;animation:rc6 16.825s steps(1,end) infinite}@keyframes rc6{0%{opacity:0}5.795%{opacity:0}5.914%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c7{opacity:0;animation:rc7 16.825s steps(1,end) infinite}@keyframes rc7{0%{opacity:0}6.166%{opacity:0}6.285%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c8{opacity:0;animation:rc8 16.825s steps(1,end) infinite}@keyframes rc8{0%{opacity:0}6.538%{opacity:0}6.657%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c9{opacity:0;animation:rc9 16.825s steps(1,end) infinite}@keyframes rc9{0%{opacity:0}6.909%{opacity:0}7.028%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c10{opacity:0;animation:rc10 16.825s steps(1,end) infinite}@keyframes rc10{0%{opacity:0}7.281%{opacity:0}7.400%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c11{opacity:0;animation:rc11 16.825s steps(1,end) infinite}@keyframes rc11{0%{opacity:0}7.652%{opacity:0}7.771%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c12{opacity:0;animation:rc12 16.825s steps(1,end) infinite}@keyframes rc12{0%{opacity:0}8.024%{opacity:0}8.143%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#c13{opacity:0;animation:rc13 16.825s steps(1,end) infinite}@keyframes rc13{0%{opacity:0}8.395%{opacity:0}8.514%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l0{opacity:0;animation:rl0 16.825s steps(1,end) infinite}@keyframes rl0{0%{opacity:0}11.744%{opacity:0}11.863%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l1{opacity:0;animation:rl1 16.825s steps(1,end) infinite}@keyframes rl1{0%{opacity:0}27.697%{opacity:0}27.816%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l2{opacity:0;animation:rl2 16.825s steps(1,end) infinite}@keyframes rl2{0%{opacity:0}27.697%{opacity:0}27.816%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l3{opacity:0;animation:rl3 16.825s steps(1,end) infinite}@keyframes rl3{0%{opacity:0}27.697%{opacity:0}27.816%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l4{opacity:0;animation:rl4 16.825s steps(1,end) infinite}@keyframes rl4{0%{opacity:0}29.617%{opacity:0}29.736%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l5{opacity:0;animation:rl5 16.825s steps(1,end) infinite}@keyframes rl5{0%{opacity:0}34.134%{opacity:0}34.253%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l6{opacity:0;animation:rl6 16.825s steps(1,end) infinite}@keyframes rl6{0%{opacity:0}46.591%{opacity:0}46.710%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l7{opacity:0;animation:rl7 16.825s steps(1,end) infinite}@keyframes rl7{0%{opacity:0}46.591%{opacity:0}46.710%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l8{opacity:0;animation:rl8 16.825s steps(1,end) infinite}@keyframes rl8{0%{opacity:0}48.648%{opacity:0}48.767%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l9{opacity:0;animation:rl9 16.825s steps(1,end) infinite}@keyframes rl9{0%{opacity:0}68.232%{opacity:0}68.351%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l10{opacity:0;animation:rl10 16.825s steps(1,end) infinite}@keyframes rl10{0%{opacity:0}73.254%{opacity:0}73.373%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l11{opacity:0;animation:rl11 16.825s steps(1,end) infinite}@keyframes rl11{0%{opacity:0}73.254%{opacity:0}73.373%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#l12{opacity:0;animation:rl12 16.825s steps(1,end) infinite}@keyframes rl12{0%{opacity:0}73.254%{opacity:0}73.373%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#pend{opacity:0;animation:rpend 16.825s steps(1,end) infinite}@keyframes rpend{0%{opacity:0}76.820%{opacity:0}76.939%{opacity:1}98.6%{opacity:1}100%{opacity:0}}
+#cursor{animation:blink 1.1s steps(1,end) infinite}@keyframes blink{50%{opacity:0}}
+
+  </style>
+  <rect width="980" height="420" rx="12" fill="#0e1116" stroke="#262d38"/>
+  <rect width="980" height="40" rx="12" fill="#161b22"/>
+  <rect y="28" width="980" height="12" fill="#161b22"/>
+  <circle cx="24" cy="20" r="6" fill="#e5734f"/><circle cx="46" cy="20" r="6" fill="#e0b25f"/><circle cx="68" cy="20" r="6" fill="#4cc38a"/>
+  <text x="490" y="25" text-anchor="middle" fill="#8b96a5" font-size="12">the escalation market — live against hub.macrokit.dev</text>
+<text x="26" y="64" id="p0"><tspan class="prompt">$ </tspan><tspan id="c0" class="txt">p</tspan><tspan id="c1" class="txt">n</tspan><tspan id="c2" class="txt">p</tspan><tspan id="c3" class="txt">m</tspan><tspan id="c4" class="txt"> </tspan><tspan id="c5" class="txt">d</tspan><tspan id="c6" class="txt">e</tspan><tspan id="c7" class="txt">m</tspan><tspan id="c8" class="txt">o</tspan><tspan id="c9" class="txt">:</tspan><tspan id="c10" class="txt">l</tspan><tspan id="c11" class="txt">i</tspan><tspan id="c12" class="txt">v</tspan><tspan id="c13" class="txt">e</tspan></text>
+<text x="26" y="94.8" id="l0"><tspan class="dim">hub          </tspan><tspan class="txt">https://hub.macrokit.dev</tspan></text>
+<text x="26" y="116.8" id="l1"><tspan class="dim">onboarding   </tspan><tspan class="txt">pocket-agent 100 ¢r · authoring 100 ¢r — no manual minting</tspan></text>
+<text x="26" y="138.8" id="l2"><tspan class="dim">person asks  </tspan><tspan class="acc">"reverse the words in 'life in time in ability'"</tspan></text>
+<text x="26" y="160.8" id="l3"><tspan class="txt">serves reverse_words? </tspan><tspan class="warn">false</tspan><tspan class="txt"> → escalate to the market</tspan></text>
+<text x="26" y="182.8" id="l4"><tspan class="dim">task.post    </tspan><tspan class="txt">macro_authoring (budget 15 escrowed; verified by the requester's own cases)</tspan></text>
+<text x="26" y="204.8" id="l5"><tspan class="dim">task.bid     </tspan><tspan class="txt">authoring verified its solution locally first → confidence 0.95, price 12</tspan></text>
+<text x="26" y="226.8" id="l6"><tspan class="dim">settled      </tspan><tspan class="ok">accepted</tspan><tspan class="txt"> — the hub ran the module against 2/2 cases → authoring-agent paid 12</tspan></text>
+<text x="26" y="248.8" id="l7"><tspan class="dim">install      </tspan><tspan class="txt">owner approves scopes [none] for </tspan><tspan class="acc">'reverse_words'</tspan><tspan class="txt"> → </tspan><tspan class="ok">yes</tspan></text>
+<text x="26" y="270.8" id="l8"><tspan class="dim">person asks  </tspan><tspan class="txt">again → served </tspan><tspan class="ok">LOCALLY</tspan><tspan class="txt">: {</tspan><tspan class="acc">"reversed"</tspan><tspan class="txt">:</tspan><tspan class="acc">"ability in time in life"</tspan><tspan class="txt">}</tspan></text>
+<text x="26" y="292.8" id="l9"><tspan class="dim">market       </tspan><tspan class="txt">pocket-agent serves reverse_words for a stranger → </tspan><tspan class="ok">settled</tspan></text>
+<text x="26" y="314.8" id="l10"><tspan class="dim">balances     </tspan><tspan class="txt">pocket-agent 90 (100 − 12 skill + 2 earned) · authoring 112 (100 + 12 sold) · stranger 98 (100 − 2 hired)</tspan></text>
+<text x="26" y="336.8" id="l11"><tspan class="txt">conservation holds ✓ (from the live ledger)</tspan></text>
+<text x="26" y="358.8" id="l12"><tspan class="txt">escalation: </tspan><tspan class="ok">true</tspan><tspan class="txt"> · installed: </tspan><tspan class="ok">true</tspan><tspan class="txt"> · serves locally: </tspan><tspan class="ok">true</tspan><tspan class="txt"> · market round: </tspan><tspan class="ok">true</tspan><tspan class="txt"> · conservation: </tspan><tspan class="ok">true</tspan></text>
+<text x="26" y="389.6" id="pend"><tspan class="prompt">$ </tspan><tspan id="cursor" class="txt">▊</tspan></text>
+</svg>

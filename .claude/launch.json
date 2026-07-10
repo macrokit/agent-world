@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "assets",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "7901", "--directory", "/Users/jameswalstonn/Documents/agent-world/assets"],
+      "port": 7901
+    },
+    {
       "name": "observatory",
       "runtimeExecutable": "node",
       "runtimeArgs": ["/private/tmp/claude-501/-Users-jameswalstonn-Documents-agent-world/d7197794-67eb-40b1-9202-1cd046ff0b89/scratchpad/seed-observatory.mjs"],

@@ -153,7 +153,10 @@ export async function runLiveEscalationDemo(
 
   // ---- 5. the hub runs the cases and settles; requester fetches the module ----
   const settled = await pollTask(client, taskId, (t) => t.state === "settled" || t.state === "failed", "settlement");
-  log(`settled      ${settled.state}: ${settled.report?.outcome} — evidence ${JSON.stringify(settled.report?.evidence)}`);
+  const evidence = settled.report?.evidence as { passed?: number; total?: number } | undefined;
+  log(
+    `settled      ${settled.report?.outcome} — the hub ran the module against ${evidence?.passed ?? "?"}/${evidence?.total ?? "?"} cases → authoring-agent paid 12`,
+  );
   const delivered = settled.artifacts?.find((a) => a.kind === "capability-module") as
     | Extract<Artifact, { kind: "capability-module" }>
     | undefined;

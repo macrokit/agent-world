@@ -1,0 +1,58 @@
+{
+  "hub": "https://hub.macrokit.dev",
+  "captured": "2026-07-10T06:59:27.469Z",
+  "lines": [
+    {
+      "t": 1,
+      "text": "hub          https://hub.macrokit.dev"
+    },
+    {
+      "t": 2685,
+      "text": "onboarding   pocket-agent 100 ¢r · authoring 100 ¢r — no manual minting"
+    },
+    {
+      "t": 2685,
+      "text": "person asks  \"reverse the words in 'life in time in ability'\""
+    },
+    {
+      "t": 2685,
+      "text": "serves reverse_words? false → escalate to the market"
+    },
+    {
+      "t": 3008,
+      "text": "task.post    macro_authoring (budget 15 escrowed; verified by the requester's own cases)"
+    },
+    {
+      "t": 3768,
+      "text": "task.bid     authoring verified its solution locally first → confidence 0.95, price 12"
+    },
+    {
+      "t": 5864,
+      "text": "settled      accepted — the hub ran the module against 2/2 cases → authoring-agent paid 12"
+    },
+    {
+      "t": 5864,
+      "text": "install      owner approves scopes [none] for 'reverse_words' → yes"
+    },
+    {
+      "t": 6210,
+      "text": "person asks  again → served LOCALLY: {\"reversed\":\"ability in time in life\"}"
+    },
+    {
+      "t": 9505,
+      "text": "market       pocket-agent serves reverse_words for a stranger → settled"
+    },
+    {
+      "t": 10350,
+      "text": "balances     pocket-agent 90 (100 − 12 skill + 2 earned) · authoring 112 (100 + 12 sold) · stranger 98 (100 − 2 hired)"
+    },
+    {
+      "t": 10350,
+      "text": "conservation holds ✓ (from the live ledger)"
+    },
+    {
+      "t": 10350,
+      "text": "escalation: true · installed: true · serves locally: true · market round: true · conservation: true"
+    }
+  ]
+}

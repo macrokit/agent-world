@@ -17,8 +17,12 @@ dependency graph is the proof). This package is where the two meet.
 
 ## The escalation market
 
+![The escalation market, live against hub.macrokit.dev](../../assets/escalation-market.svg)
+
 ```sh
-pnpm install && pnpm build && pnpm demo
+pnpm install && pnpm build
+pnpm demo         # in-process hub
+pnpm demo:live    # against https://hub.macrokit.dev — poll-driven, onboarding-funded
 ```
 
 A weak Macrokit-powered agent hits novelty it cannot serve → posts an authoring task
