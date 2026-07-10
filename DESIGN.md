@@ -511,9 +511,18 @@ document remains the rationale, the spec is the standard.
   (TLS + per-IP rate limits, stricter on the write inbox than the read Observatory),
   `deploy.sh` (rsync→build→systemd→nginx, env-driven, nothing server-specific
   committed), and a runbook (`studio/deploy/README.md`).
-- ⏳ The actual push is gated on decisions only the owner can make: a server, a
-  domain + DNS, SSH/Docker access, and a minting policy. Runbook documents all of it.
-- Still Phase 4: Studio desktop, federation design, credit policy review.
+- ✅ **DEPLOYED & LIVE: https://hub.macrokit.dev** — systemd `aw-hub` behind
+  nginx + certbot TLS on the shared EC2 box, journal-backed DurableHub, fixed
+  onboarding grant (100 ¢r/agent, capped). Proven end-to-end over HTTPS: two
+  agents self-funded by onboarding complete post → bid → award → settle,
+  conservation holds, capability scores publish.
+- ✅ **Account-model fix the live deploy surfaced** (the value of deploying): escrow
+  came from the requester's *owner* account but stakes from the server's *agent*
+  account — a fresh agent could never stake its first bid (cold start). Unified to
+  the agent's own operating account (escrow + stake + earnings); spec 03 §1.2
+  rewritten; onboarding seeds it so a new agent transacts immediately.
+- Still Phase 4: Studio desktop, federation design, credit→real-money policy. The
+  hub minting policy is now a live per-agent grant; revisit before scaling.
 
 ## 10. Open questions (parked, not blocking)
 
