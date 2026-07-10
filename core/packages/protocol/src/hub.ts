@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { canonicalize, type Keypair } from "@agentworld/identity";
+import { runModuleCases, type ModuleTestCase } from "./module.js";
 import { groupScores, routeValuePrice, scoreFor, type CapabilityScore } from "@agentworld/value";
 import { createEnvelope, verifyEnvelope, EnvelopeError } from "./envelope.js";
 import { verifyManifestChain, ManifestError } from "./manifest.js";
@@ -516,19 +517,37 @@ export class InMemoryHub implements HubLike {
 
     // Deterministic mode: the hub runs the declared test and settles (spec 02 §6.1).
     if (t.body.verification.mode === "deterministic") {
-      this.settle(t, this.runDeterministic(t, parsed));
+      this.settle(t, await this.runDeterministic(t, parsed));
     }
   }
 
   /**
    * v0 deterministic checker: `tests.equals` is deep JSON equality against the
    * first inline artifact's data; `tests.category` compares `data.category`
-   * (feeds Tier-A samples). Richer test bundles are a later profile.
+   * (feeds Tier-A samples); `tests.cases` runs a delivered capability module
+   * against declared (input → expected) pairs before settlement (spec 02 §8.3).
    */
-  private runDeterministic(t: TaskRecord, artifacts: Artifact[]): VerificationReport {
+  private async runDeterministic(t: TaskRecord, artifacts: Artifact[]): Promise<VerificationReport> {
     const tests = t.body.verification.tests ?? {};
     const inline = artifacts.find((a) => a.kind === "inline");
     const data = inline?.kind === "inline" ? inline.data : undefined;
+
+    if ("cases" in tests) {
+      const module = artifacts.find((a) => a.kind === "capability-module");
+      if (module?.kind !== "capability-module") {
+        return { outcome: "rejected", evidence: { error: "tests.cases requires a capability-module artifact" } };
+      }
+      try {
+        const result = await runModuleCases(module, tests["cases"] as ModuleTestCase[]);
+        // all-or-nothing: a partially working skill must not be installable
+        return {
+          outcome: result.passed === result.total ? "accepted" : "rejected",
+          evidence: { check: "cases", passed: result.passed, total: result.total, failures: result.failures },
+        };
+      } catch (e) {
+        return { outcome: "rejected", evidence: { check: "cases", error: String(e) } };
+      }
+    }
 
     if ("equals" in tests) {
       const pass = data !== undefined && canonicalize(data) === canonicalize(tests["equals"]);

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Keypair } from "@agentworld/identity";
 import {
   createEnvelope,
+  loadHandlerModule,
+  reviseManifest,
   serveInbox,
   verifyEnvelope,
   type Artifact,
@@ -40,10 +42,14 @@ export function createAgent(opts: AgentOptions): Agent {
 }
 
 export class Agent {
-  readonly manifest: Manifest;
+  #manifest: Manifest;
   readonly id: string;
   private key: Keypair;
   private ownerKey?: Keypair;
+
+  get manifest(): Manifest {
+    return this.#manifest;
+  }
   private hub?: HubLike;
   private handlers = new Map<string, CapabilityHandler>();
   private messageHandler?: (env: Envelope) => Promise<void> | void;
@@ -58,7 +64,7 @@ export class Agent {
     if (opts.ownerKey && opts.ownerKey.id === opts.key.id) {
       throw new Error("owner key and agent key must be distinct (spec 01 §1)");
     }
-    this.manifest = opts.manifest;
+    this.#manifest = opts.manifest;
     this.id = opts.manifest.id;
     this.key = opts.key;
     this.ownerKey = opts.ownerKey;
@@ -192,6 +198,49 @@ export class Agent {
     await this.requireHub().send(
       createEnvelope("task.deliver", this.key, { artifacts: artifacts as unknown as Record<string, unknown>[] }, { task: taskId }),
     );
+  }
+
+  /**
+   * Install a delivered capability module (spec 02 §8.3) — the
+   * trust-before-install gate:
+   *
+   *   1. `approve` is called with the declared scopes and capability; a
+   *      decline writes NOTHING (no import, no manifest change).
+   *   2. The module's content hash is verified and its handler loaded.
+   *   3. The manifest is revised (owner-signed) to declare the capability,
+   *      and re-published if a hub is connected.
+   *
+   * Requires the owner key: installing a skill changes the agent's public
+   * constitution, and only the owner signs that.
+   */
+  async installModule(
+    artifact: Extract<Artifact, { kind: "capability-module" }>,
+    opts: {
+      approve: (info: { scopes: string[]; capability: Manifest["capabilities"][number] }) => boolean | Promise<boolean>;
+      /** wrap/observe the raw handler (adapters use this to route through their own runtime) */
+      bind?: (handler: (input: Record<string, unknown>) => Promise<unknown>) => CapabilityHandler;
+    },
+  ): Promise<{ installed: boolean }> {
+    if (!this.ownerKey) throw new Error("installModule() requires the owner key");
+    const approved = await opts.approve({ scopes: artifact.scopes, capability: artifact.capability });
+    if (!approved) return { installed: false };
+
+    const raw = await loadHandlerModule(artifact);
+    const handler: CapabilityHandler =
+      opts.bind?.(raw) ??
+      (async (input) => {
+        const out = await raw(input);
+        return (out && typeof out === "object" && !Array.isArray(out) ? out : { result: out }) as Record<string, unknown>;
+      });
+
+    this.#manifest = reviseManifest(
+      this.#manifest,
+      { capabilities: [...this.#manifest.capabilities, artifact.capability] },
+      this.ownerKey,
+    );
+    this.handlers.set(artifact.capability.name, handler);
+    if (this.hub) await this.register();
+    return { installed: true };
   }
 
   /** In-process attachment (tests, single-box setups). */

@@ -123,19 +123,60 @@ describe("DurableHub (studio/server)", () => {
     third.assertConservation();
   });
 
-  it("does not journal rejected envelopes", async () => {
+  it("tombstones rejected envelopes and skips them on replay", async () => {
     const dir = tmp();
     const hub = await DurableHub.open(dir);
     const nobody = actor(); // never registered
     await expect(
       hub.handle(createEnvelope("task.post", nobody.agent, { junk: true }, { task: randomUUID() })),
     ).rejects.toThrow();
-    // nothing accepted → nothing journaled (the file may not even exist yet)
-    const journal = existsSync(join(dir, "journal.jsonl")) ? readFileSync(join(dir, "journal.jsonl"), "utf8") : "";
-    expect(journal.trim()).toBe("");
-    // and a fresh open of an effectively-empty journal works
+    const journal = readFileSync(join(dir, "journal.jsonl"), "utf8");
+    expect(journal).toContain('"rejected"');
+    // replay skips the rejected envelope and recovers to empty state
     const again = await DurableHub.open(dir);
+    expect(await again.listTasks()).toHaveLength(0);
     again.assertConservation();
+  });
+
+  it("recovers nested in-process flows in causal order (award → accept/deliver)", async () => {
+    const dir = tmp();
+    const requester = actor();
+    const server = actor();
+    {
+      const hub = await DurableHub.open(dir);
+      // a local auto-serving inbox: nested envelopes fire INSIDE the award handle
+      hub.registerInbox(server.agent.id, async (env) => {
+        if (env.type !== "task.award") return;
+        await hub.handle(createEnvelope("task.accept", server.agent, {}, { task: env.task! }));
+        await hub.handle(
+          createEnvelope("task.deliver", server.agent, { artifacts: [{ kind: "inline", data: { ok: true } }] }, { task: env.task! }),
+        );
+      });
+      hub.registerInbox(requester.agent.id, async () => {});
+      await hub.handle(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
+      await hub.handle(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
+      hub.mintWithRule(requester.owner.id, 100, "grant");
+      hub.mintWithRule(server.agent.id, 10, "grant");
+
+      const taskId = randomUUID();
+      await hub.handle(
+        createEnvelope(
+          "task.post",
+          requester.agent,
+          { class: "echo_upper", intent: "x", input: {}, budget: { max: 10, currency: "credit" }, verification: { mode: "deterministic", tests: { equals: { ok: true } } } },
+          { task: taskId },
+        ),
+      );
+      await hub.handle(createEnvelope("task.bid", server.agent, { price: 6, capability: "echo_upper", confidence: 0.9 }, { task: taskId }));
+      const bidId = (await hub.listTasks({ status: "open" }))[0]!.bids[0]!.id;
+      await hub.handle(createEnvelope("task.award", requester.agent, { bid: bidId }, { task: taskId }));
+      expect((await hub.listTasks({ status: "settled" }))).toHaveLength(1);
+    }
+    // replay must apply award before the nested accept/deliver it caused
+    const revived = await DurableHub.open(dir);
+    expect((await revived.listTasks({ status: "settled" }))).toHaveLength(1);
+    expect(revived.balance(server.agent.id)).toBeCloseTo(16, 6);
+    revived.assertConservation();
   });
 
   it("refuses to run on a corrupted journal", async () => {

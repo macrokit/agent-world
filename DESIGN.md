@@ -468,9 +468,24 @@ document remains the rationale, the spec is the standard.
   leaderboard (spec 03 §8 P1/P2), and the page says so.
 - 66 tests green across core + studio.
 
-**Phase 3 — the ecosystem:**
-`@agentworld/adapter-macrokit` + the escalation-market demo (**the launch GIF**),
-capability-module artifact profile, public hub instance, MCP/A2A bridges.
+**Phase 3 — the ecosystem: ◐ adapter + escalation market COMPLETE.**
+- ✅ Capability-module artifact profile `aw-handler/0.1` (content-addressed data:
+  URL): hub-side verification runs the requester's own cases before settlement
+  (all-or-nothing — a partially working skill must not be installable); agent-side
+  `installModule` gate (owner sees scopes → decline writes nothing → owner-signed
+  manifest revision, republished).
+- ✅ `@agentworld/adapter-macrokit` (`adapters/macrokit`, core stays macrokit-free):
+  macro→capability projection (JSON Schema + D-017 surfaces as `x-tool-*` scopes),
+  real registry/dispatcher/session-log behind the boundary (capability_violation
+  enforcement verified through the market path), `escalate()`, and
+  `installIntoRegistry()` — the purchased module becomes a real macro.
+- ✅ The escalation-market demo (**the launch asset**): novelty → authoring task →
+  locally-verified bid → hub-verified module → owner-gated install → serves its
+  person locally → earns on the market. Bought for 12, earning 2/task.
+- ✅ DurableHub journal ordering fixed for in-process flows (journal-on-verify +
+  rejection tombstones — nested accept/deliver now replay in causal order).
+- Remaining for Phase 3: MCP/A2A bridges, public hub instance, `mkpack/1` module
+  profile (install a real Macrokit pack via `@macrokit/cli`).
 
 **Phase 4 — opening up:**
 Studio desktop, federation design, credit policy review.

@@ -1,5 +1,6 @@
 import { generateKeypair, type Keypair } from "@agentworld/identity";
 import {
+  buildHandlerModule,
   createManifest,
   HubClient,
   InMemoryHub,
@@ -174,5 +175,78 @@ describe("Agent end-to-end (spec 01+02+03 together)", () => {
   it("refuses to attach a handler for an undeclared capability", () => {
     const { agent } = makeAgent({ capabilities: [] });
     expect(() => agent.capability("echo_upper", async () => ({}))).toThrow(/not declared/);
+  });
+});
+
+describe("installModule — the trust-before-install gate (spec 02 §8.3)", () => {
+  const SOURCE = `export async function handler(input) {
+    return { reversed: String(input.text).split(" ").reverse().join(" ") };
+  }`;
+  const artifactFor = (source: string) =>
+    buildHandlerModule({
+      source,
+      capability: {
+        name: "reverse_words",
+        intent: "reverse the words of a text",
+        input: { type: "object" },
+        output: { type: "object" },
+        scopes: ["x-demo-surface"],
+      },
+      cases: [{ input: { text: "a b" }, expected: { reversed: "b a" } }],
+    });
+
+  it("a decline writes nothing — no manifest change, no handler", async () => {
+    const { agent } = makeAgent();
+    const before = agent.manifest.seq;
+    const seen: string[][] = [];
+    const result = await agent.installModule(artifactFor(SOURCE), {
+      approve: ({ scopes }) => {
+        seen.push(scopes);
+        return false;
+      },
+    });
+    expect(result.installed).toBe(false);
+    expect(seen).toEqual([["x-demo-surface"]]); // the owner SAW the scopes before deciding
+    expect(agent.manifest.seq).toBe(before);
+    expect(agent.manifest.capabilities.some((c) => c.name === "reverse_words")).toBe(false);
+  });
+
+  it("approval installs: owner-signed manifest revision, republished, and the skill serves", async () => {
+    const hub = new InMemoryHub(generateKeypair());
+    const buyer = makeAgent();
+    buyer.agent.connect(hub).attachLocal(hub);
+    await buyer.agent.register();
+    hub.mint(buyer.owner.id, 100);
+    hub.mint(buyer.key.id, 10);
+
+    const result = await buyer.agent.installModule(artifactFor(SOURCE), { approve: () => true });
+    expect(result.installed).toBe(true);
+    expect(buyer.agent.manifest.seq).toBe(1); // revised, owner-signed
+    expect((await hub.searchAgents({ capability: "reverse_words" }))[0]).toHaveLength(2); // republished chain
+
+    // the purchased skill now serves a market task end-to-end
+    const requester = makeAgent();
+    requester.agent.connect(hub).attachLocal(hub);
+    await requester.agent.register();
+    hub.mint(requester.owner.id, 50);
+    const taskId = await requester.agent.post({
+      class: "reverse_words",
+      intent: "reverse this",
+      input: { text: "value of extension" },
+      budget: { max: 5, currency: "credit" },
+      verification: { mode: "deterministic", tests: { equals: { reversed: "extension of value" } } },
+    });
+    await buyer.agent.bid(taskId, { price: 2, capability: "reverse_words", confidence: 0.9 });
+    const bidId = (await hub.listTasks({ status: "open" }))[0]!.bids[0]!.id;
+    await requester.agent.award(taskId, bidId);
+    expect(hub.taskView(taskId).state).toBe("settled");
+    hub.assertConservation();
+  });
+
+  it("rejects a module whose hash does not match, even when approved", async () => {
+    const { agent } = makeAgent();
+    const bad = { ...artifactFor(SOURCE), hash: "sha256:" + "0".repeat(64) };
+    await expect(agent.installModule(bad, { approve: () => true })).rejects.toThrow(/hash/);
+    expect(agent.manifest.seq).toBe(0);
   });
 });

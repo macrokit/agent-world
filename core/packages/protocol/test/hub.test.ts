@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createEnvelope } from "../src/envelope.js";
 import { HubError, InMemoryHub } from "../src/hub.js";
+import { buildHandlerModule, sourceToDataUrl } from "../src/module.js";
 import type { Envelope, TaskBody } from "../src/types.js";
 import { makeActor, type Actor } from "./helpers.js";
 
@@ -218,6 +219,77 @@ describe("InMemoryHub enforcement", () => {
   it("rejects unsupported envelope types", async () => {
     const { hub, requester } = await setup();
     await expect(hub.handle(createEnvelope("task.hack", requester.agent, {}))).rejects.toThrow(HubError);
+  });
+});
+
+describe("capability-module verification (spec 02 §8.3)", () => {
+  const GOOD_SOURCE = `export async function handler(input) {
+    return { reversed: String(input.text).split(" ").reverse().join(" ") };
+  }`;
+  const BAD_SOURCE = `export async function handler(input) { return { reversed: input.text }; }`;
+  const CASES = [
+    { input: { text: "hello agent world" }, expected: { reversed: "world agent hello" } },
+    { input: { text: "a b" }, expected: { reversed: "b a" } },
+  ];
+  const moduleCapability = {
+    name: "reverse_words",
+    intent: "reverse the words of a text",
+    input: { type: "object" },
+    output: { type: "object" },
+    scopes: [],
+  };
+
+  async function postModuleTask(hub: InMemoryHub, requester: Actor, server: Actor) {
+    const taskId = randomUUID();
+    await hub.handle(
+      createEnvelope(
+        "task.post",
+        requester.agent,
+        taskBody({
+          class: "open",
+          verification: { mode: "deterministic", tests: { cases: CASES } },
+        }),
+        { task: taskId },
+      ),
+    );
+    await hub.handle(
+      createEnvelope("task.bid", server.agent, { price: 8, capability: "echo_upper", confidence: 0.9 }, { task: taskId }),
+    );
+    const bidId = (await hub.listTasks({ status: "open" })).find((t) => t.id === taskId)!.bids[0]!.id;
+    await hub.handle(createEnvelope("task.award", requester.agent, { bid: bidId }, { task: taskId }));
+    return taskId;
+  }
+
+  it("settles when the delivered module passes all declared cases", async () => {
+    const { hub, requester, server } = await setup();
+    const taskId = await postModuleTask(hub, requester, server);
+    const artifact = buildHandlerModule({ source: GOOD_SOURCE, capability: moduleCapability, cases: CASES });
+    await hub.handle(createEnvelope("task.deliver", server.agent, { artifacts: [artifact] }, { task: taskId }));
+    const t = hub.taskView(taskId);
+    expect(t.state).toBe("settled");
+    expect(t.report?.evidence).toMatchObject({ check: "cases", passed: 2, total: 2 });
+    hub.assertConservation();
+  });
+
+  it("rejects a module that fails cases — stake burns", async () => {
+    const { hub, requester, server } = await setup();
+    const taskId = await postModuleTask(hub, requester, server);
+    const artifact = buildHandlerModule({ source: BAD_SOURCE, capability: moduleCapability, cases: CASES });
+    await hub.handle(createEnvelope("task.deliver", server.agent, { artifacts: [artifact] }, { task: taskId }));
+    expect(hub.taskView(taskId).state).toBe("failed");
+    expect(hub.totals().burned).toBeGreaterThan(0);
+    hub.assertConservation();
+  });
+
+  it("rejects a module whose content does not match its hash", async () => {
+    const { hub, requester, server } = await setup();
+    const taskId = await postModuleTask(hub, requester, server);
+    const artifact = buildHandlerModule({ source: GOOD_SOURCE, capability: moduleCapability, cases: CASES });
+    const tampered = { ...artifact, url: sourceToDataUrl(BAD_SOURCE) };
+    await hub.handle(createEnvelope("task.deliver", server.agent, { artifacts: [tampered] }, { task: taskId }));
+    const t = hub.taskView(taskId);
+    expect(t.state).toBe("failed");
+    expect(JSON.stringify(t.report?.evidence)).toContain("hash");
   });
 });
 

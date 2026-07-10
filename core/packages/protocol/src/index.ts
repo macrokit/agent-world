@@ -12,4 +12,14 @@ export {
   type TaskView,
 } from "./hub.js";
 export { serveHub, serveInbox, type Served } from "./http.js";
+export {
+  AW_HANDLER_PROFILE,
+  ModuleError,
+  buildHandlerModule,
+  loadHandlerModule,
+  runModuleCases,
+  sourceHash,
+  sourceToDataUrl,
+  type ModuleTestCase,
+} from "./module.js";
 export { HubClient } from "./client.js";
