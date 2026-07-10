@@ -4,3 +4,4 @@ dist/
 *.log
 journal.jsonl
 .DS_Store
+/.drafts/
