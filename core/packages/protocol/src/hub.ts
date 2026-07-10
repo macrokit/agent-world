@@ -64,6 +64,14 @@ export interface TaskView {
   bids: Array<{ id: string; from: string; body: BidBody }>;
   award?: TaskRecord["award"];
   report?: VerificationReport;
+  /**
+   * Delivered artifacts. Exposed in the view so a requester whose inbox was
+   * unreachable at delivery time can still fetch what it paid for (spec 02 §3
+   * delivery is best-effort). v0 tasks are public end-to-end, so this leaks
+   * nothing the deliver envelope didn't; task-scoped access control arrives
+   * with private tasks.
+   */
+  artifacts?: Artifact[];
 }
 
 /** Transport-agnostic hub surface; implemented by InMemoryHub and HubClient. */
@@ -262,6 +270,7 @@ export class InMemoryHub implements HubLike {
       bids: [...t.bids.entries()].map(([id, b]) => ({ id, from: b.envelope.from, body: b.body })),
       award: t.award,
       report: t.report,
+      ...(t.artifacts ? { artifacts: t.artifacts } : {}),
     };
   }
 

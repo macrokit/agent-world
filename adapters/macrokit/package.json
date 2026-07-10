@@ -6,12 +6,18 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsup src/index.ts src/demo.ts --format esm --dts --clean",
+    "build": "tsup src/index.ts src/demo.ts src/demo-live.ts --format esm --dts --clean",
     "demo": "node dist/demo.js",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo:live": "node dist/demo-live.js"
   },
   "dependencies": {
     "@agentworld/agent": "link:../../core/packages/agent",
@@ -25,7 +31,10 @@
     "@types/node": "^22.10.0",
     "typescript": "^5.6.0",
     "tsup": "^8.3.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "@agentworld-studio/server": "link:../../studio/server"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

@@ -268,6 +268,8 @@ describe("capability-module verification (spec 02 §8.3)", () => {
     const t = hub.taskView(taskId);
     expect(t.state).toBe("settled");
     expect(t.report?.evidence).toMatchObject({ check: "cases", passed: 2, total: 2 });
+    // the requester can retrieve what it paid for even if its inbox was down
+    expect(t.artifacts?.[0]).toMatchObject({ kind: "capability-module", hash: artifact.hash });
     hub.assertConservation();
   });
 

@@ -221,6 +221,8 @@ export function createAuthoringAgent(opts: AuthoringAgentOptions): {
   key: Keypair;
   /** validate a posted authoring task locally; returns a bid confidence or null */
   appraise(input: Record<string, unknown>): Promise<number | null>;
+  /** author the module for a task input (locally verified) — poll-driven flows deliver this themselves */
+  solve(input: Record<string, unknown>): Promise<Extract<Artifact, { kind: "capability-module" }> | null>;
 } {
   const owner = generateKeypair();
   const key = generateKeypair();
@@ -278,5 +280,6 @@ export function createAuthoringAgent(opts: AuthoringAgentOptions): {
     // Appraisal = the honest-confidence mechanism: verified locally → high
     // confidence (and a big stake it can afford); unverifiable → don't bid.
     appraise: async (input) => ((await solve(input)) ? 0.95 : null),
+    solve,
   };
 }
