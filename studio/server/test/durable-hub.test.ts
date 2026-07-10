@@ -2,6 +2,7 @@ import { generateKeypair, type Keypair } from "@agentworld/identity";
 import {
   createEnvelope,
   createManifest,
+  reviseManifest,
   type Capability,
   type Manifest,
 } from "@agentworld/protocol";
@@ -96,7 +97,7 @@ describe("DurableHub (studio/server)", () => {
       const hub = await DurableHub.open(dir);
       await hub.handle(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
       await hub.handle(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
-      hub.mintWithRule(requester.owner.id, 100, "test onboarding grant");
+      hub.mintWithRule(requester.agent.id, 100, "test onboarding grant");
       hub.mintWithRule(server.agent.id, 10, "test onboarding grant");
       await marketRound(hub, requester, server);
       expect((await hub.listTasks({ status: "settled" }))).toHaveLength(1);
@@ -106,7 +107,7 @@ describe("DurableHub (studio/server)", () => {
     const revived = await DurableHub.open(dir);
     expect((await revived.listTasks({ status: "settled" }))).toHaveLength(1);
     expect(revived.balance(server.agent.id)).toBeCloseTo(16, 6); // 10 + 6, stake back
-    expect(revived.balance(requester.owner.id)).toBeCloseTo(94, 6);
+    expect(revived.balance(requester.agent.id)).toBeCloseTo(94, 6);
     expect(await revived.searchAgents({ capability: "echo_upper" })).toHaveLength(2);
     expect(revived.samples).toHaveLength(1);
     revived.assertConservation();
@@ -155,7 +156,7 @@ describe("DurableHub (studio/server)", () => {
       hub.registerInbox(requester.agent.id, async () => {});
       await hub.handle(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
       await hub.handle(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
-      hub.mintWithRule(requester.owner.id, 100, "grant");
+      hub.mintWithRule(requester.agent.id, 100, "grant");
       hub.mintWithRule(server.agent.id, 10, "grant");
 
       const taskId = randomUUID();
@@ -177,6 +178,47 @@ describe("DurableHub (studio/server)", () => {
     expect((await revived.listTasks({ status: "settled" }))).toHaveLength(1);
     expect(revived.balance(server.agent.id)).toBeCloseTo(16, 6);
     revived.assertConservation();
+  });
+
+  it("onboarding grant: fixed, per-agent, to the agent's own account, once, survives restart", async () => {
+    const dir = tmp();
+    const a1 = actor();
+    const a2 = actor();
+
+    {
+      const hub = await DurableHub.open(dir, { onboarding: { amount: 100, cap: 250 } });
+      await hub.handle(createEnvelope("manifest.publish", a1.owner, { manifest: a1.manifest }));
+      await hub.handle(createEnvelope("manifest.publish", a2.owner, { manifest: a2.manifest }));
+      // grants land in each AGENT's own account (the account it stakes/earns from)
+      expect(hub.balance(a1.agent.id)).toBe(100);
+      expect(hub.balance(a2.agent.id)).toBe(100);
+      // owner accounts stay empty — the grant funds the operating agent, not the reserve
+      expect(hub.balance(a1.owner.id)).toBe(0);
+      // a revision of a1 (same agent id) does NOT re-grant
+      const rev = reviseManifest(a1.manifest, { name: "renamed" }, a1.owner);
+      await hub.handle(createEnvelope("manifest.publish", a1.owner, { manifest: rev }));
+      expect(hub.balance(a1.agent.id)).toBe(100);
+      expect(hub.onboardingStatus()).toMatchObject({ minted: 200, granted: 2, cap: 250 });
+      hub.assertConservation();
+    }
+
+    // restart: returning agents must NOT be re-granted
+    const revived = await DurableHub.open(dir, { onboarding: { amount: 100, cap: 250 } });
+    expect(revived.balance(a1.agent.id)).toBe(100);
+    expect(revived.onboardingStatus()).toMatchObject({ minted: 200, granted: 2 });
+    // a THIRD new agent would exceed the cap (200 + 100 > 250) → ungranted
+    const a3 = actor();
+    await revived.handle(createEnvelope("manifest.publish", a3.owner, { manifest: a3.manifest }));
+    expect(revived.balance(a3.agent.id)).toBe(0);
+    expect(revived.onboardingStatus().minted).toBe(200);
+    revived.assertConservation();
+  });
+
+  it("no onboarding policy → no automatic grants", async () => {
+    const hub = await DurableHub.open(tmp());
+    const a = actor();
+    await hub.handle(createEnvelope("manifest.publish", a.owner, { manifest: a.manifest }));
+    expect(hub.balance(a.agent.id)).toBe(0);
   });
 
   it("refuses to run on a corrupted journal", async () => {

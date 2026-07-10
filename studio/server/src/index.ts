@@ -26,7 +26,15 @@ async function main(argv: string[]): Promise<void> {
     process.exitCode = dir ? 0 : 1;
     return;
   }
-  const hub = await DurableHub.open(dir);
+
+  // Fixed onboarding grant (spec 03 §2.3): each new principal, once, up to a cap.
+  const grantAmount = flag(argv, "onboarding") ?? process.env["AW_ONBOARDING"];
+  const grantCap = flag(argv, "onboarding-cap") ?? process.env["AW_ONBOARDING_CAP"];
+  const onboarding = grantAmount
+    ? { amount: Number(grantAmount), ...(grantCap ? { cap: Number(grantCap) } : {}) }
+    : undefined;
+
+  const hub = await DurableHub.open(dir, onboarding ? { onboarding } : undefined);
 
   const mint = flag(argv, "mint");
   if (mint) {
@@ -52,6 +60,9 @@ async function main(argv: string[]): Promise<void> {
   console.log(`  health:      ${served.url}/healthz  ·  ${served.url}/readyz`);
   console.log(`  state:       ${hub.dir}`);
   console.log(`  totals:      ${JSON.stringify(hub.totals())}`);
+  if (onboarding) {
+    console.log(`  onboarding:  ${onboarding.amount} ¢r/principal${onboarding.cap ? `, cap ${onboarding.cap}` : ""} — ${JSON.stringify(hub.onboardingStatus())}`);
+  }
 
   // Graceful shutdown: drain in-flight requests, then exit (systemd/Docker SIGTERM).
   let closing = false;

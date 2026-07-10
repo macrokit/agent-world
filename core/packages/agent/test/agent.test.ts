@@ -73,7 +73,7 @@ describe("Agent end-to-end (spec 01+02+03 together)", () => {
 
     await requester.agent.register();
     await server.agent.register();
-    hub.mint(requester.owner.id, 100);
+    hub.mint(requester.key.id, 100);
     hub.mint(server.key.id, 10);
 
     const taskId = await requester.agent.post({
@@ -93,7 +93,7 @@ describe("Agent end-to-end (spec 01+02+03 together)", () => {
     expect(task.state).toBe("settled");
     expect(task.report?.outcome).toBe("accepted");
     expect(hub.balance(server.key.id)).toBeCloseTo(16, 6); // 10 + 6, stake returned
-    expect(hub.balance(requester.owner.id)).toBeCloseTo(94, 6);
+    expect(hub.balance(requester.key.id)).toBeCloseTo(94, 6);
     hub.assertConservation();
   });
 
@@ -123,7 +123,7 @@ describe("Agent end-to-end (spec 01+02+03 together)", () => {
 
     await requester.agent.register();
     await server.register();
-    hub.mint(requester.owner.id, 100);
+    hub.mint(requester.key.id, 100);
     hub.mint(key.id, 10);
 
     const taskId = await requester.agent.post({
@@ -216,7 +216,7 @@ describe("installModule — the trust-before-install gate (spec 02 §8.3)", () =
     const buyer = makeAgent();
     buyer.agent.connect(hub).attachLocal(hub);
     await buyer.agent.register();
-    hub.mint(buyer.owner.id, 100);
+    hub.mint(buyer.key.id, 100);
     hub.mint(buyer.key.id, 10);
 
     const result = await buyer.agent.installModule(artifactFor(SOURCE), { approve: () => true });
@@ -228,7 +228,7 @@ describe("installModule — the trust-before-install gate (spec 02 §8.3)", () =
     const requester = makeAgent();
     requester.agent.connect(hub).attachLocal(hub);
     await requester.agent.register();
-    hub.mint(requester.owner.id, 50);
+    hub.mint(requester.key.id, 50);
     const taskId = await requester.agent.post({
       class: "reverse_words",
       intent: "reverse this",

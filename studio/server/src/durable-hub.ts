@@ -38,17 +38,36 @@ type JournalEntry = EnvelopeEntry | MintEntry | RejectedEntry;
  * storage engine later — swapping the journal for a database changes this
  * file only.
  */
+/** The public, rule-stated onboarding-grant policy (spec 03 §2.3). */
+export interface OnboardingPolicy {
+  /** fixed credits granted to each newly-seen principal, once */
+  amount: number;
+  /**
+   * hard ceiling on total onboarding mint. Keypairs are free, so a
+   * per-principal grant is sybil-farmable; the cap bounds the blast radius.
+   * Omit for unbounded (dev only).
+   */
+  cap?: number;
+}
+
+export const ONBOARDING_RULE = "onboarding grant";
+
 export class DurableHub extends InMemoryHub {
   readonly dir: string;
   private journalPath: string;
+  private onboarding?: OnboardingPolicy;
+  /** agents already granted — rebuilt on replay from onboarding mint entries */
+  private grantedAgents = new Set<string>();
+  private onboardingMinted = 0;
 
-  private constructor(dir: string, key: Keypair, opts?: { kappa?: number }) {
+  private constructor(dir: string, key: Keypair, opts?: { kappa?: number; onboarding?: OnboardingPolicy }) {
     super(key, opts);
     this.dir = dir;
     this.journalPath = join(dir, "journal.jsonl");
+    this.onboarding = opts?.onboarding;
   }
 
-  static async open(dir: string, opts?: { kappa?: number }): Promise<DurableHub> {
+  static async open(dir: string, opts?: { kappa?: number; onboarding?: OnboardingPolicy }): Promise<DurableHub> {
     mkdirSync(dir, { recursive: true });
     const keyPath = join(dir, "hub.key");
     let key: Keypair;
@@ -72,6 +91,11 @@ export class DurableHub extends InMemoryHub {
       if (entry.kind === "rejected") continue;
       if (entry.kind === "mint") {
         super.mint(entry.account, entry.amount);
+        // rebuild onboarding bookkeeping so restarts never re-grant an agent
+        if (entry.rule === ONBOARDING_RULE) {
+          this.grantedAgents.add(entry.account);
+          this.onboardingMinted += entry.amount;
+        }
         continue;
       }
       const id = (entry.env as { id?: string }).id;
@@ -113,6 +137,41 @@ export class DurableHub extends InMemoryHub {
       if (id) this.append({ kind: "rejected", id });
       throw e;
     }
+    this.maybeGrantOnboarding(raw);
+  }
+
+  /**
+   * Fixed onboarding grant: the first time an agent is registered (its genesis
+   * manifest.publish), seed its OWN operating account with a fixed amount, once,
+   * up to the policy cap. Rule-stated and non-discretionary (spec 03 §2.3, §8
+   * P5) — the rule is in the journal, applies to every agent equally.
+   *
+   * The grant goes to the agent's own account (not the principal's) because
+   * that is the account an agent escrows, stakes, and earns from (spec 03 §1.2)
+   * — so a fresh agent can transact immediately without waiting to be funded.
+   * Honestly sybil-farmable (keypairs are free); `cap` bounds the pool.
+   */
+  private maybeGrantOnboarding(raw: unknown): void {
+    if (!this.onboarding) return;
+    const env = raw as { type?: string; body?: { manifest?: { id?: string; seq?: number } } };
+    if (env?.type !== "manifest.publish") return;
+    const agentId = env.body?.manifest?.id;
+    if (!agentId || this.grantedAgents.has(agentId)) return;
+    if (this.onboarding.cap !== undefined && this.onboardingMinted + this.onboarding.amount > this.onboarding.cap) {
+      return; // pool exhausted; registration still succeeded, just ungranted
+    }
+    this.grantedAgents.add(agentId);
+    this.onboardingMinted += this.onboarding.amount;
+    this.mintWithRule(agentId, this.onboarding.amount, ONBOARDING_RULE);
+  }
+
+  /** For operators/tests: onboarding pool usage so far. */
+  onboardingStatus(): { minted: number; cap?: number; granted: number } {
+    return {
+      minted: this.onboardingMinted,
+      ...(this.onboarding?.cap !== undefined ? { cap: this.onboarding.cap } : {}),
+      granted: this.grantedAgents.size,
+    };
   }
 
   /** Rule-stated minting (spec 03 §2.3): the rule is recorded with the entry. */

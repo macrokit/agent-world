@@ -467,8 +467,11 @@ export class InMemoryHub implements HubLike {
       throw new HubError("unauthorized", `budget would exceed mandate perMonth ${head.mandate.spend.perMonth}`);
     }
 
-    // Escrow before OPEN (spec 03 §3.1): debit the requester's OWNER account.
-    this.debit(head.owner, body.budget.max, `escrow for task ${env.task}`);
+    // Escrow before OPEN (spec 03 §3.1): debit the acting agent's OWN operating
+    // account — the same account its stakes and earnings use (spec 03 §1.2). The
+    // mandate spend-limits (checked above) bound how much of the principal's trust
+    // the agent commits; the owner account is the principal's separate reserve.
+    this.debit(env.from, body.budget.max, `escrow for task ${env.task}`);
     const byMonth = this.monthSpend.get(env.from) ?? new Map<string, number>();
     byMonth.set(mk, round(spent + body.budget.max));
     this.monthSpend.set(env.from, byMonth);
@@ -658,25 +661,24 @@ export class InMemoryHub implements HubLike {
   /** Settlement (spec 03 §4): exactly one per task; burns are destroyed. */
   private settle(t: TaskRecord, report: VerificationReport): void {
     const award = t.award!;
-    const serverOwner = this.manifestOf(award.server).owner;
-    const requesterOwner = this.manifestOf(t.requester).owner;
-
+    // Both parties operate from their own agent accounts (spec 03 §1.2):
+    // the server earns to its account; the requester's escrow remainder
+    // refunds to its account.
     if (report.outcome === "accepted") {
       this.credit(award.server, award.price);
-      this.credit(requesterOwner, round(t.escrow - award.price));
+      this.credit(t.requester, round(t.escrow - award.price));
       this.credit(award.server, award.stake);
     } else if (report.outcome === "partial") {
       const q = report.quality ?? 0;
       const pay = round(q * award.price);
       this.credit(award.server, pay);
-      this.credit(requesterOwner, round(t.escrow - pay));
+      this.credit(t.requester, round(t.escrow - pay));
       this.credit(award.server, round(q * award.stake));
       this.burn(round((1 - q) * award.stake));
     } else {
-      this.credit(requesterOwner, t.escrow);
+      this.credit(t.requester, t.escrow);
       this.burn(award.stake);
     }
-    void serverOwner; // earnings go to the agent's own account (spec 03 §1.2)
 
     t.escrow = 0;
     t.report = report;
@@ -696,12 +698,11 @@ export class InMemoryHub implements HubLike {
     this.requireMandate(env.from, "task.cancel");
     const t = this.taskFor(env);
     if (env.from !== t.requester) throw new HubError("unauthorized", "only the requester cancels");
-    const requesterOwner = this.manifestOf(t.requester).owner;
     if (t.state === "open") {
-      this.credit(requesterOwner, t.escrow);
+      this.credit(t.requester, t.escrow);
     } else if (t.state === "awarded") {
       // v0: no kill fee; stake returns, escrow refunds (spec 02 §4.2 notes a hub-configured kill fee)
-      this.credit(requesterOwner, t.escrow);
+      this.credit(t.requester, t.escrow);
       this.credit(t.award!.server, t.award!.stake);
     }
     t.escrow = 0;

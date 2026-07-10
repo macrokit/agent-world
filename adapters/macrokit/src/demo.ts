@@ -71,11 +71,12 @@ export async function runEscalationDemo(log: (line: string) => void = () => {}):
 
   await weak.agent.register();
   await authoring.agent.register();
-  hub.mint(weak.owner.id, 50);
-  hub.mint(weak.key.id, 5);
+  // Each agent's own operating account (spec 03 §1.2): posts escrow from it,
+  // bids stake from it, earnings land in it.
+  hub.mint(weak.key.id, 50);
   hub.mint(authoring.key.id, 20);
   log(`agents       pocket-agent (macrokit runtime, 1 macro) · authoring-agent (separately owned)`);
-  log(`grants       pocket owner 50 ¢r · pocket 5 ¢r · authoring 20 ¢r`);
+  log(`grants       pocket-agent 50 ¢r · authoring 20 ¢r`);
 
   // ---- 1. novelty: the person asks for something the agent cannot serve ----
   const ask = "reverse the words in 'life in time in ability'";
@@ -126,6 +127,9 @@ export async function runEscalationDemo(log: (line: string) => void = () => {}):
     return true;
   });
 
+  // snapshot: what the skill cost, before it starts earning
+  const afterBuy = hub.balance(weak.key.id);
+
   // ---- 6. the person asks again — served locally, through the dispatcher ----
   const local = await weak.dispatcher.dispatch({ tool: "reverse_words", args: { text: "life in time in ability" } });
   const localAnswer = local.ok ? local.value : local.error;
@@ -134,7 +138,7 @@ export async function runEscalationDemo(log: (line: string) => void = () => {}):
   // ---- 7. and the skill earns: a stranger posts a reverse_words task ----
   const stranger = makeStranger(hub);
   await stranger.agent.register();
-  hub.mint(stranger.owner.id, 20);
+  hub.mint(stranger.agent.id, 20);
   const marketTask = await stranger.agent.post({
     class: "reverse_words",
     intent: "reverse these words",
@@ -150,7 +154,8 @@ export async function runEscalationDemo(log: (line: string) => void = () => {}):
   hub.assertConservation();
   const totals = hub.totals();
   log(`ledger       balances ${totals.balances} + escrowed ${totals.escrowed} + burned ${totals.burned} = minted ${totals.minted} ✓`);
-  log(`balances     pocket owner ${hub.balance(weak.owner.id)} (bought the skill for 12) · pocket ${hub.balance(weak.key.id)} (earning with it) · authoring ${hub.balance(authoring.key.id)}`);
+  const finalWeak = hub.balance(weak.key.id);
+  log(`balances     pocket-agent ${finalWeak} (bought the skill for ${50 - afterBuy}, earned ${finalWeak - afterBuy} serving it) · authoring ${hub.balance(authoring.key.id)}`);
 
   return {
     escalationSettled: escalationTask.state === "settled",
@@ -158,8 +163,8 @@ export async function runEscalationDemo(log: (line: string) => void = () => {}):
     servesLocally: weak.serves("reverse_words"),
     localAnswer,
     marketRoundSettled: marketSettled,
-    weakAgentSpent: 50 - hub.balance(weak.owner.id),
-    weakAgentEarned: hub.balance(weak.key.id) - 5,
+    weakAgentSpent: 50 - afterBuy, // paid for the authoring task
+    weakAgentEarned: finalWeak - afterBuy, // earned back by serving the class
     authoringEarned: hub.balance(authoring.key.id) - 20,
   };
 }

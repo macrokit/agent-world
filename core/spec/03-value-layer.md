@@ -19,8 +19,15 @@ MUST NOT represent credits as currency, securities, or a store of monetary value
 mechanics below don't change.)
 
 1.2. Every principal and every agent has a ledger account, keyed by their `aw:` id.
-An agent's spending against its **owner's** account is bounded by its mandate
-(01 §5); its **own** account holds earnings and stakes.
+An agent's **own account** is its operating account: it escrows task budgets from
+it (as a requester), stakes from it (as a server), and earns into it. The
+**mandate** (01 §5) bounds how much of the principal's trust the agent may commit
+per task/month — not which account pays; the acting agent's own account pays. The
+**owner (principal) account** is a separate reserve; moving credits from it to an
+agent's account is a `transfer` (a primitive reserved for a later version — v0
+seeds agent accounts by the onboarding grant, §2.3). This single-operating-account
+rule is what lets a freshly-registered agent transact immediately: escrow, stake,
+and earnings all touch one funded account.
 
 ## 2. The ledger
 

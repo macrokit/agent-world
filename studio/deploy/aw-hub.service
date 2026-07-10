@@ -17,6 +17,10 @@ WorkingDirectory=/opt/agent-world
 # Bind to localhost; nginx terminates TLS and proxies in.
 Environment=AW_HUB_HOST=127.0.0.1
 Environment=AW_HUB_PORT=7800
+# Fixed onboarding grant (spec 03 §2.3): amount per principal + total pool cap.
+# Edit these to set launch policy; empty AW_ONBOARDING disables auto-grants.
+Environment=AW_ONBOARDING=100
+Environment=AW_ONBOARDING_CAP=100000
 ExecStart=/usr/bin/node studio/server/dist/index.js --dir /var/lib/agent-world --host 127.0.0.1 --port 7800
 Restart=on-failure
 RestartSec=2

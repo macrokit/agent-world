@@ -87,7 +87,7 @@ describe("studio server (Observatory + hub endpoints)", () => {
     const server = actor();
     await hub.handle(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
     await hub.handle(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
-    hub.mintWithRule(requester.owner.id, 100, "test grant");
+    hub.mintWithRule(requester.agent.id, 100, "test grant");
     hub.mintWithRule(server.agent.id, 10, "test grant");
     await settleOne(hub, requester, server);
 
@@ -152,7 +152,7 @@ describe("studio server (Observatory + hub endpoints)", () => {
       for (const a of [requester, serverA, serverB]) {
         await hub.handle(createEnvelope("manifest.publish", a.owner, { manifest: a.manifest }));
       }
-      hub.mintWithRule(requester.owner.id, 100, "grant");
+      hub.mintWithRule(requester.agent.id, 100, "grant");
       hub.mintWithRule(serverA.agent.id, 20, "grant");
       hub.mintWithRule(serverB.agent.id, 20, "grant");
 

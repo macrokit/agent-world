@@ -84,11 +84,11 @@ export async function runDemo(log: (line: string) => void = () => {}): Promise<D
     await requester.register();
     await ws.agent.register();
     await ko.agent.register();
-    hub.mint(owner.id, 100);
+    hub.mint(key.id, 100); // the personal agent's own operating account (spec 03 §1.2)
     hub.mint(ws.key.id, 10);
     hub.mint(ko.key.id, 10);
     log(`agents       personal-agent, wordsmith (pure fn), kv-oracle (knowledge file)`);
-    log(`grants       owner 100 ¢r · wordsmith 10 ¢r · kv-oracle 10 ¢r`);
+    log(`grants       personal-agent 100 ¢r · wordsmith 10 ¢r · kv-oracle 10 ¢r`);
 
     const client = new HubClient(hubSrv.url);
 
@@ -149,13 +149,13 @@ export async function runDemo(log: (line: string) => void = () => {}): Promise<D
     hub.assertConservation();
     const totals = hub.totals();
     log(`ledger       balances ${totals.balances} + escrowed ${totals.escrowed} + burned ${totals.burned} = minted ${totals.minted} ✓ conservation holds`);
-    log(`balances     owner ${hub.balance(owner.id)} · wordsmith ${hub.balance(ws.key.id)} · kv-oracle ${hub.balance(ko.key.id)}`);
+    log(`balances     personal-agent ${hub.balance(key.id)} · wordsmith ${hub.balance(ws.key.id)} · kv-oracle ${hub.balance(ko.key.id)}`);
 
     return {
       settled: (await hub.listTasks({ status: "settled" })).length,
       wordsmithBalance: hub.balance(ws.key.id),
       oracleBalance: hub.balance(ko.key.id),
-      requesterOwnerBalance: hub.balance(owner.id),
+      requesterOwnerBalance: hub.balance(key.id),
       burned: totals.burned,
     };
   } finally {

@@ -1,2 +1,7 @@
 packages:
   - "server"
+
+# pnpm 11 blocks dependency build scripts by default; esbuild (via tsup) needs
+# its postinstall to fetch the platform binary. Allowlist it (pnpm 11 home).
+onlyBuiltDependencies:
+  - esbuild

@@ -31,7 +31,7 @@ describe("HTTP binding (spec 02 §3)", () => {
 
     await client.send(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
     await client.send(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
-    hub.mint(requester.owner.id, 100);
+    hub.mint(requester.agent.id, 100);
     hub.mint(server.agent.id, 10);
 
     const taskId = randomUUID();

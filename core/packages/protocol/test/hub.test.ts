@@ -26,7 +26,7 @@ async function setup(opts?: { verification?: TaskBody["verification"] }) {
 
   await hub.handle(createEnvelope("manifest.publish", requester.owner, { manifest: requester.manifest }));
   await hub.handle(createEnvelope("manifest.publish", server.owner, { manifest: server.manifest }));
-  hub.mint(requester.owner.id, 100); // onboarding grants (rule-stated)
+  hub.mint(requester.agent.id, 100); // onboarding grants (rule-stated)
   hub.mint(server.agent.id, 10);
 
   const taskId = randomUUID();
@@ -48,7 +48,7 @@ describe("InMemoryHub market flow (spec 02 §4, 03 §3–4)", () => {
   it("post → bid → award → deliver → verify(accepted) settles correctly", async () => {
     const { hub, requester, server, serverInbox, taskId } = await setup();
 
-    expect(hub.balance(requester.owner.id)).toBe(90); // 10 escrowed
+    expect(hub.balance(requester.agent.id)).toBe(90); // 10 escrowed
     await bidAndAward(hub, requester, server, taskId);
     // stake = 0.2 · 0.8 · 8 = 1.28
     expect(hub.balance(server.agent.id)).toBeCloseTo(8.72, 6);
@@ -62,7 +62,7 @@ describe("InMemoryHub market flow (spec 02 §4, 03 §3–4)", () => {
 
     expect((await hub.listTasks())[0]!.state).toBe("settled");
     expect(hub.balance(server.agent.id)).toBeCloseTo(18, 6); // 10 − 1.28 + 8 + 1.28
-    expect(hub.balance(requester.owner.id)).toBeCloseTo(92, 6); // 100 − 8
+    expect(hub.balance(requester.agent.id)).toBeCloseTo(92, 6); // 100 − 8
     expect(hub.samples).toHaveLength(1);
     expect(hub.samples[0]).toMatchObject({ server: server.agent.id, class: "echo_upper", outcome: "accepted" });
     hub.assertConservation();
@@ -78,7 +78,7 @@ describe("InMemoryHub market flow (spec 02 §4, 03 §3–4)", () => {
     await hub.handle(createEnvelope("task.verify", requester.agent, { outcome: "rejected" }, { task: taskId }));
 
     expect((await hub.listTasks())[0]!.state).toBe("failed");
-    expect(hub.balance(requester.owner.id)).toBe(100);
+    expect(hub.balance(requester.agent.id)).toBe(100);
     expect(hub.balance(server.agent.id)).toBeCloseTo(8.4, 6);
     expect(hub.totals().burned).toBeCloseTo(1.6, 6); // destroyed, not redistributed (03 §4.1)
     hub.assertConservation();
@@ -93,7 +93,7 @@ describe("InMemoryHub market flow (spec 02 §4, 03 §3–4)", () => {
     await hub.handle(createEnvelope("task.verify", requester.agent, { outcome: "partial", quality: 0.5 }, { task: taskId }));
 
     expect(hub.balance(server.agent.id)).toBeCloseTo(10 - 0.8 + 4 + 0.4, 6);
-    expect(hub.balance(requester.owner.id)).toBeCloseTo(96, 6);
+    expect(hub.balance(requester.agent.id)).toBeCloseTo(96, 6);
     expect(hub.totals().burned).toBeCloseTo(0.4, 6);
     hub.assertConservation();
   });
@@ -150,7 +150,7 @@ describe("InMemoryHub enforcement", () => {
       },
     });
     await hub.handle(createEnvelope("manifest.publish", limited.owner, { manifest: limited.manifest }));
-    hub.mint(limited.owner.id, 100);
+    hub.mint(limited.agent.id, 100);
 
     await expect(
       hub.handle(createEnvelope("task.post", limited.agent, taskBody({ budget: { max: 6, currency: "credit" } }), { task: randomUUID() })),
@@ -211,7 +211,7 @@ describe("InMemoryHub enforcement", () => {
     await bidAndAward(hub, requester, server, taskId);
     await hub.handle(createEnvelope("task.cancel", requester.agent, {}, { task: taskId }));
     expect((await hub.listTasks())[0]!.state).toBe("cancelled");
-    expect(hub.balance(requester.owner.id)).toBe(100);
+    expect(hub.balance(requester.agent.id)).toBe(100);
     expect(hub.balance(server.agent.id)).toBe(10);
     hub.assertConservation();
   });
@@ -332,7 +332,7 @@ describe("value-price auto-award (spec 03 §5–6)", () => {
       hub.registerInbox(a.agent.id, async () => {});
       await hub.handle(createEnvelope("manifest.publish", a.owner, { manifest: a.manifest }));
     }
-    hub.mint(requester.owner.id, 1000);
+    hub.mint(requester.agent.id, 1000);
     hub.mint(good.agent.id, 50);
     hub.mint(bad.agent.id, 50);
     await buildHistory(hub, requester, good, 6, true);
