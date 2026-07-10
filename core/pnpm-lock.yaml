@@ -42,6 +42,30 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/bridge-a2a:
+    dependencies:
+      '@agentworld/agent':
+        specifier: workspace:*
+        version: link:../agent
+      '@agentworld/identity':
+        specifier: workspace:*
+        version: link:../identity
+      '@agentworld/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/bridge-mcp:
+    dependencies:
+      '@agentworld/agent':
+        specifier: workspace:*
+        version: link:../agent
+      '@agentworld/identity':
+        specifier: workspace:*
+        version: link:../identity
+      '@agentworld/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/cli:
     dependencies:
       '@agentworld/agent':

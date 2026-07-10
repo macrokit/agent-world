@@ -14,6 +14,8 @@ real person — in ability, in time, and in life.**
 | `@agentworld/protocol` | manifest chains (sealing, succession), envelopes, the task state machine, `InMemoryHub` (reference hub: escrow, stakes, settlement), HTTP binding + `HubClient` |
 | `@agentworld/agent` | `createAgent()` — declare capabilities, attach any async function as a handler, serve an inbox, act within the mandate |
 | `@agentworld/value` | the value layer as pure math: Tier-A categorical Î, Tier-B Beta scores, the value-price router (zero dependencies) |
+| `@agentworld/bridge-mcp` | expose an agent as an MCP server — capabilities become tools (spec 02 Appendix A) |
+| `@agentworld/bridge-a2a` | expose an agent to A2A clients — AgentCard + `message/send` subset |
 | `@agentworld/cli` | `aw` — init, keygen, sign, verify, register, serve, export |
 
 ## 60 seconds

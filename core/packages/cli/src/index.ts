@@ -1,5 +1,20 @@
 #!/usr/bin/env node
-import { exportArchive, init, loadKeypair, keygenToFile, register, serve, sign, verify } from "./lib.js";
+import {
+  exportArchive,
+  init,
+  keygenToFile,
+  loadKeypair,
+  register,
+  serve,
+  sign,
+  successionAssume,
+  successionAttest,
+  successionContest,
+  successionPlan,
+  successionSeal,
+  successionStatus,
+  verify,
+} from "./lib.js";
 
 const USAGE = `aw — Agent World agents (spec agent-world/0.1)
 
@@ -11,7 +26,85 @@ const USAGE = `aw — Agent World agents (spec agent-world/0.1)
   aw register <dir> --hub <url>                   publish the manifest to a hub
   aw serve <dir> --hub <url> [--port <n>]         run the agent (inbox + handlers.mjs)
   aw export <dir> [--out <file>]                  write the portability archive (no keys)
+
+  aw succession status <dir>                      the plan, in plain language
+  aw succession plan <dir> [--successor <awId>]... [--guardian <awId>]
+       [--attestation guardian|guardian+hub] [--frame sealed|transferable]
+       [--continuation endowed|transferred|wound-down]
+  aw succession seal <dir> --i-have-reviewed      seal the goal frame NOW (permanent)
+  aw succession attest --agent <awId> --guardian-key <file> --hub <url>
+  aw succession contest <dir> --hub <url>         living owner cancels an attestation
+  aw succession assume <dir> --successor-key <file> --attestation <envelopeId> [--hub <url>]
 `;
+
+function flags(args: string[], name: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === `--${name}`) out.push(args[i + 1]!);
+  }
+  return out;
+}
+
+async function succession(sub: string | undefined, rest: string[]): Promise<number> {
+  switch (sub) {
+    case "status": {
+      console.log(successionStatus(rest[0]!));
+      return 0;
+    }
+    case "plan": {
+      const dir = rest[0]!;
+      const successors = flags(rest, "successor");
+      const rev = successionPlan(dir, {
+        ...(successors.length ? { successors } : {}),
+        guardian: flag(rest, "guardian"),
+        attestation: flag(rest, "attestation") as "guardian" | "guardian+hub" | undefined,
+        frame: flag(rest, "frame") as "sealed" | "transferable" | undefined,
+        continuation: flag(rest, "continuation") as "endowed" | "transferred" | "wound-down" | undefined,
+      });
+      console.log(`succession plan updated (revision seq ${rev.seq}). Current plan:\n`);
+      console.log(successionStatus(dir));
+      return 0;
+    }
+    case "seal": {
+      const rev = successionSeal(rest[0]!, { acknowledged: rest.includes("--i-have-reviewed") });
+      console.log(`goal frame SEALED at revision seq ${rev.seq}. This is permanent.`);
+      return 0;
+    }
+    case "attest": {
+      const agent = flag(rest, "agent");
+      const keyFile = flag(rest, "guardian-key");
+      const hub = flag(rest, "hub");
+      if (!agent || !keyFile || !hub) throw new Error("usage: aw succession attest --agent <awId> --guardian-key <file> --hub <url>");
+      const id = await successionAttest(hub, keyFile, agent);
+      console.log(`attestation recorded: ${id}`);
+      console.log(`the successor will need this id for 'aw succession assume --attestation ${id}'.`);
+      console.log(`if the owner is alive, they can cancel with 'aw succession contest' at any time.`);
+      return 0;
+    }
+    case "contest": {
+      const hub = flag(rest, "hub");
+      if (!rest[0] || !hub) throw new Error("usage: aw succession contest <dir> --hub <url>");
+      await successionContest(hub, rest[0]);
+      console.log("attestation contested and cancelled; the guardian has been publicly flagged.");
+      return 0;
+    }
+    case "assume": {
+      const dir = rest[0];
+      const key = flag(rest, "successor-key");
+      const attestation = flag(rest, "attestation");
+      if (!dir || !key || !attestation) {
+        throw new Error("usage: aw succession assume <dir> --successor-key <file> --attestation <id> [--hub <url>]");
+      }
+      const rev = await successionAssume(dir, { successorKeyFile: key, attestation, hub: flag(rest, "hub") });
+      console.log(`ownership assumed at revision seq ${rev.seq}; owner is now ${rev.owner}.`);
+      console.log(`owner.key in ${dir} has been replaced with the successor key.`);
+      return 0;
+    }
+    default:
+      console.log(USAGE);
+      return 1;
+  }
+}
 
 function flag(args: string[], name: string): string | undefined {
   const i = args.indexOf(`--${name}`);
@@ -67,6 +160,8 @@ async function main(argv: string[]): Promise<number> {
         await new Promise(() => {}); // run until killed
         return 0;
       }
+      case "succession":
+        return await succession(target, rest);
       case "export": {
         if (!target) throw new Error("usage: aw export <dir> [--out <file>]");
         const out = flag(rest, "out") ?? `${target.replace(/\/$/, "")}-export.json`;

@@ -201,6 +201,28 @@ export class Agent {
   }
 
   /**
+   * Serve a capability locally — the person (or a bridge acting for them)
+   * calling their own agent directly, no market involved. Bridges (MCP, A2A)
+   * are this method behind a protocol.
+   */
+  async invoke(name: string, input: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const handler = this.handlers.get(name);
+    if (!handler) throw new Error(`no handler attached for capability '${name}'`);
+    const result = await handler(input, {
+      task: "local",
+      body: {
+        class: name,
+        intent: `local invoke of ${name}`,
+        input,
+        budget: { max: 0, currency: "credit" },
+        verification: { mode: "requester" },
+      },
+    });
+    if (Array.isArray(result)) return { artifacts: result };
+    return result;
+  }
+
+  /**
    * Install a delivered capability module (spec 02 §8.3) — the
    * trust-before-install gate:
    *

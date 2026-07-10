@@ -484,8 +484,21 @@ document remains the rationale, the spec is the standard.
   person locally → earns on the market. Bought for 12, earning 2/task.
 - ✅ DurableHub journal ordering fixed for in-process flows (journal-on-verify +
   rejection tombstones — nested accept/deliver now replay in causal order).
-- Remaining for Phase 3: MCP/A2A bridges, public hub instance, `mkpack/1` module
-  profile (install a real Macrokit pack via `@macrokit/cli`).
+- ✅ **Bridges** (spec 02 Appendix A): `@agentworld/bridge-mcp` — an agent's
+  capabilities as MCP tools over hand-rolled JSON-RPC stdio (initialize /
+  tools/list / tools/call, scopes surfaced in tool descriptions);
+  `@agentworld/bridge-a2a` — AgentCard at /.well-known/agent.json (capabilities
+  → skills, aw identity as an extension) + a synchronous `message/send` subset.
+  Both are inbound, owner-run, market-less by design (`Agent.invoke`).
+- ✅ **Succession CLI** — the legacy machinery made usable by a person:
+  `aw succession plan/status` (plain language, loud warning when no successor is
+  named), `seal` (cooling-off acknowledgment required; permanent), `attest`
+  (guardian), `contest` ("I am alive" — cancels and publicly flags the
+  guardian), `assume` (successor takes the owner key; hub-rejected assumptions
+  leave the local estate untouched). Hub enforces guardian-only attestation and
+  the contest window with replay-stable envelope-timestamp arithmetic.
+- Deferred past Phase 3: public hub instance (deployment, not code) and the
+  `mkpack/1` module profile (install a full Macrokit pack via `@macrokit/cli`).
 
 **Phase 4 — opening up:**
 Studio desktop, federation design, credit policy review.

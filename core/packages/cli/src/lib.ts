@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   generateKeypair,
@@ -172,6 +172,149 @@ export async function register(dir: string, hubUrl: string): Promise<void> {
       if (manifest === chain[chain.length - 1]) throw e;
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// succession — the lifecycle that carries the agent past its person (spec 01 §6)
+// ---------------------------------------------------------------------------
+
+export interface SuccessionPlanOpts {
+  successors?: string[];
+  guardian?: string;
+  attestation?: "guardian" | "guardian+hub";
+  frame?: "sealed" | "transferable";
+  continuation?: "endowed" | "transferred" | "wound-down";
+}
+
+/** `aw succession plan` — an owner-signed revision of the succession block. */
+export function successionPlan(dir: string, opts: SuccessionPlanOpts): Manifest {
+  const chain = loadChain(dir);
+  const head = chain[chain.length - 1]!;
+  const owner = loadKeypair(join(dir, FILES.ownerKey));
+  const revision = reviseManifest(
+    head,
+    {
+      succession: {
+        ...head.succession,
+        ...(opts.successors ? { successors: opts.successors } : {}),
+        ...(opts.guardian ? { guardian: opts.guardian } : {}),
+        ...(opts.attestation ? { attestation: opts.attestation } : {}),
+        ...(opts.frame ? { frame: opts.frame } : {}),
+        ...(opts.continuation ? { continuation: opts.continuation } : {}),
+      },
+    },
+    owner,
+  );
+  const next = [...chain, revision];
+  verifyManifestChain(next);
+  writeChain(dir, next);
+  return revision;
+}
+
+export const SEAL_WARNING = `Sealing is PERMANENT and cannot be undone — not by you, not by your heirs.
+
+From this revision on, no key — including your own — can change what this
+agent values. Its goal statement becomes the fixed frame it will serve for
+as long as it runs, possibly long after you. Heirs will be able to operate
+it, but never to repoint it.
+
+Take a day. Read the goal statement in agent.json out loud. If it still
+says exactly what you mean, run this command again with --i-have-reviewed.`;
+
+/** `aw succession seal` — seals the goal frame NOW. Cooling-off enforced (spec 08 fiduciary floor). */
+export function successionSeal(dir: string, opts: { acknowledged: boolean }): Manifest {
+  if (!opts.acknowledged) throw new Error(SEAL_WARNING);
+  const chain = loadChain(dir);
+  const head = chain[chain.length - 1]!;
+  if (head.goal.sealed === true) throw new Error("the goal frame is already sealed");
+  const owner = loadKeypair(join(dir, FILES.ownerKey));
+  const revision = reviseManifest(head, { goal: { ...head.goal, sealed: true } }, owner);
+  const next = [...chain, revision];
+  verifyManifestChain(next);
+  writeChain(dir, next);
+  return revision;
+}
+
+/** `aw succession status` — the plan, in plain language (spec 08: no jargon at the estate boundary). */
+export function successionStatus(dir: string): string {
+  const chain = loadChain(dir);
+  const head = chain[chain.length - 1]!;
+  const s = head.succession;
+  const lines = [
+    `${head.name} (${head.id})`,
+    `  owner: ${head.owner}`,
+    s.successors.length
+      ? `  successors: ${s.successors.join(", ")} — may take over the owner key after a valid attestation`
+      : `  successors: NONE NAMED — if the owner is gone, no one can ever operate this agent`,
+    s.guardian
+      ? `  guardian: ${s.guardian} — may attest the owner's death or incapacity`
+      : `  guardian: none — succession cannot begin without one`,
+    `  attestation: ${s.attestation ?? "guardian+hub"}` +
+      ((s.attestation ?? "guardian+hub") === "guardian+hub"
+        ? " — the hub enforces a public contest window; the owner can cancel any attestation while alive"
+        : " — the guardian's word alone starts succession"),
+    `  frame: ${s.frame ?? "sealed"}` +
+      ((s.frame ?? "sealed") === "sealed"
+        ? " — at succession, what this agent values becomes permanent; heirs operate it but cannot repoint it"
+        : " — the heir takes full ownership and may change the agent's goal"),
+    `  continuation: ${s.continuation}` +
+      (s.continuation === "endowed"
+        ? " — the agent sustains itself from its earnings; heirs may only rotate keys or wind it down"
+        : s.continuation === "transferred"
+          ? " — the heir becomes the new principal"
+          : " — the agent settles its obligations and retires"),
+    `  goal sealed now: ${head.goal.sealed === true ? "YES — permanent" : "no (seals at succession per frame above)"}`,
+  ];
+  return lines.join("\n");
+}
+
+/** `aw succession attest` — the guardian attests; returns the attestation envelope id. */
+export async function successionAttest(hubUrl: string, guardianKeyFile: string, agentId: string): Promise<string> {
+  const guardian = loadKeypair(guardianKeyFile);
+  const hub = new HubClient(hubUrl);
+  const env = createEnvelope("succession.attest", guardian, { agent: agentId });
+  await hub.send(env);
+  return env.id;
+}
+
+/** `aw succession contest` — the living owner cancels an attestation. */
+export async function successionContest(hubUrl: string, dir: string): Promise<void> {
+  const chain = loadChain(dir);
+  const owner = loadKeypair(join(dir, FILES.ownerKey));
+  await new HubClient(hubUrl).send(
+    createEnvelope("succession.contest", owner, { agent: chain[chain.length - 1]!.id }),
+  );
+}
+
+/**
+ * `aw succession assume` — a named successor takes owner authority: appends
+ * the succession revision (signed by the successor, referencing the
+ * attestation), replaces owner.key, and publishes to the hub, which enforces
+ * the contest window.
+ */
+export async function successionAssume(
+  dir: string,
+  opts: { successorKeyFile: string; attestation: string; hub?: string },
+): Promise<Manifest> {
+  const chain = loadChain(dir);
+  const head = chain[chain.length - 1]!;
+  const successor = loadKeypair(opts.successorKeyFile);
+  if (!head.succession.successors.includes(successor.id)) {
+    throw new Error("this key is not a named successor of the agent");
+  }
+  const revision = reviseManifest(head, { owner: successor.id }, successor, { attestation: opts.attestation });
+  const next = [...chain, revision];
+  verifyManifestChain(next);
+  // publish FIRST: if the hub rejects (contested attestation, open contest
+  // window), the local estate directory stays untouched.
+  if (opts.hub) {
+    await new HubClient(opts.hub).send(
+      createEnvelope("manifest.publish", successor, { manifest: revision as unknown as Record<string, unknown> }),
+    );
+  }
+  writeChain(dir, next);
+  copyFileSync(opts.successorKeyFile, join(dir, FILES.ownerKey));
+  return revision;
 }
 
 /** `aw serve` — inbox listener + hub connection; returns the bound URL. */

@@ -1,0 +1,31 @@
+{
+  "name": "@agentworld/bridge-mcp",
+  "version": "0.1.0",
+  "description": "Expose an Agent World agent as an MCP server: capabilities project 1:1 to MCP tools (spec 02 Appendix A). Hand-rolled JSON-RPC stdio, zero deps.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentworld/agent": "workspace:*",
+    "@agentworld/protocol": "workspace:*",
+    "@agentworld/identity": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

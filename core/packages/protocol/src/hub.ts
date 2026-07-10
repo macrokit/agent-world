@@ -88,6 +88,8 @@ export class InMemoryHub implements HubLike {
   readonly epsilon: number;
   /** below this sample count a bidder is an exploration candidate */
   readonly minSamples: number;
+  /** contest window for guardian+hub succession (spec 01 §6.4; default 30 days) */
+  readonly contestWindowMs: number;
 
   private key: Keypair;
   private balances = new Map<string, number>();
@@ -104,12 +106,25 @@ export class InMemoryHub implements HubLike {
   readonly deliveryFailures: Array<{ to: string; envelope: string; error: string }> = [];
   private replaying = false;
 
-  constructor(key: Keypair, opts?: { kappa?: number; epsilon?: number; minSamples?: number; random?: () => number }) {
+  constructor(
+    key: Keypair,
+    opts?: { kappa?: number; epsilon?: number; minSamples?: number; random?: () => number; contestWindowMs?: number },
+  ) {
     this.key = key;
     this.kappa = opts?.kappa ?? 0.2;
     this.epsilon = opts?.epsilon ?? 0.1;
     this.minSamples = opts?.minSamples ?? 5;
+    this.contestWindowMs = opts?.contestWindowMs ?? 30 * 24 * 60 * 60 * 1000;
     this.randomOverride = opts?.random;
+  }
+
+  /** Recorded death/incapacity attestations, per agent (spec 01 §6.1). */
+  private attestations = new Map<string, { id: string; ts: string; guardian: string; contested: boolean }>();
+  /** Public misconduct flags (e.g. a contested attestation flags the guardian). */
+  readonly flags: Array<{ subject: string; reason: string; ref: string }> = [];
+
+  attestationFor(agentId: string): { id: string; ts: string; guardian: string; contested: boolean } | undefined {
+    return this.attestations.get(agentId);
   }
 
   private randomOverride?: () => number;
@@ -335,6 +350,10 @@ export class InMemoryHub implements HubLike {
         return this.onTaskCancel(env);
       case "msg.send":
         return this.onMsgSend(env);
+      case "succession.attest":
+        return this.onSuccessionAttest(env);
+      case "succession.contest":
+        return this.onSuccessionContest(env);
       default:
         throw new HubError("rejected", `unsupported envelope type: ${env.type}`);
     }
@@ -357,6 +376,33 @@ export class InMemoryHub implements HubLike {
       throw new HubError("unauthorized", "manifest.publish must come from the manifest owner");
     }
     const existing = this.registry.get(manifest.id) ?? [];
+
+    // Succession policy (spec 01 §6): an owner change needs a recorded,
+    // uncontested attestation — and, in guardian+hub mode, an elapsed contest
+    // window. Timing compares envelope timestamps (attest → publish), never
+    // wall-clock, so journal replay reproduces the decision.
+    const head = existing[existing.length - 1];
+    if (head && manifest.owner !== head.owner) {
+      const attestation = this.attestations.get(manifest.id);
+      if (!attestation || attestation.id !== manifest.attestation) {
+        throw new HubError("rejected", "succession requires a recorded attestation for this agent");
+      }
+      if (attestation.contested) {
+        throw new HubError("rejected", "the attestation was contested by the owner (spec 01 §6.4)");
+      }
+      const mode = head.succession.attestation ?? "guardian+hub";
+      if (mode === "m-of-n") throw new HubError("rejected", "m-of-n attestation is not supported in v0");
+      if (mode === "guardian+hub") {
+        const elapsed = new Date(env.ts).getTime() - new Date(attestation.ts).getTime();
+        if (elapsed < this.contestWindowMs) {
+          throw new HubError(
+            "rejected",
+            `contest window not elapsed: ${Math.ceil((this.contestWindowMs - elapsed) / 1000)}s remain (spec 01 §6.4)`,
+          );
+        }
+      }
+    }
+
     const candidate = [...existing, manifest];
     try {
       verifyManifestChain(candidate);
@@ -365,6 +411,38 @@ export class InMemoryHub implements HubLike {
       throw e;
     }
     this.registry.set(manifest.id, candidate);
+  }
+
+  /** Guardian attests the principal's death/incapacity (spec 01 §6.1). */
+  private onSuccessionAttest(env: Envelope): void {
+    const agentId = env.body["agent"];
+    if (typeof agentId !== "string") throw new HubError("invalid", "succession.attest requires body.agent");
+    const head = this.manifestOf(agentId);
+    if (head.succession.guardian !== env.from) {
+      throw new HubError("unauthorized", "only the designated guardian may attest (spec 01 §6.1)");
+    }
+    const existing = this.attestations.get(agentId);
+    if (existing && !existing.contested) {
+      throw new HubError("rejected", "an uncontested attestation is already recorded");
+    }
+    this.attestations.set(agentId, { id: env.id, ts: env.ts, guardian: env.from, contested: false });
+  }
+
+  /** A live owner cancels an attestation — the ultimate liveness proof (spec 01 §6.4). */
+  private onSuccessionContest(env: Envelope): void {
+    const agentId = env.body["agent"];
+    if (typeof agentId !== "string") throw new HubError("invalid", "succession.contest requires body.agent");
+    const head = this.manifestOf(agentId);
+    if (head.owner !== env.from) {
+      throw new HubError("unauthorized", "only the current owner may contest an attestation");
+    }
+    const attestation = this.attestations.get(agentId);
+    if (!attestation || attestation.contested) {
+      throw new HubError("rejected", "no active attestation to contest");
+    }
+    attestation.contested = true;
+    // a contested attestation publicly flags the guardian (spec 01 §6.4)
+    this.flags.push({ subject: attestation.guardian, reason: "attestation contested by living owner", ref: env.id });
   }
 
   private monthKey(ts: string): string {
