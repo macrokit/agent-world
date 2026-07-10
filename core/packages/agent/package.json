@@ -1,0 +1,21 @@
+{
+  "name": "@agentworld/agent",
+  "version": "0.1.0",
+  "description": "Build an Agent World agent: declare capabilities, attach handlers, serve. Internals-agnostic by construction — a handler is any async function.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentworld/identity": "workspace:*",
+    "@agentworld/protocol": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

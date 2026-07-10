@@ -1,0 +1,21 @@
+{
+  "name": "@agentworld/protocol",
+  "version": "0.1.0",
+  "description": "Agent World protocol: manifests, envelopes, the task lifecycle, hub client/listener, and the InMemoryHub reference implementation (spec 01–03)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentworld/identity": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "engines": { "node": ">=20" }
+}

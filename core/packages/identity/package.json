@@ -1,0 +1,17 @@
+{
+  "name": "@agentworld/identity",
+  "version": "0.1.0",
+  "description": "Agent World identity: Ed25519 keys, aw ids, JCS canonicalization, signatures (spec 01 §2, README conventions)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": { "node": ">=20" }
+}

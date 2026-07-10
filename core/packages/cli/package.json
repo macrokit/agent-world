@@ -1,0 +1,23 @@
+{
+  "name": "@agentworld/cli",
+  "version": "0.1.0",
+  "description": "aw — create, sign, verify, register, serve, and export Agent World agents",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/lib.js",
+  "types": "./dist/lib.d.ts",
+  "bin": { "aw": "./dist/index.js" },
+  "exports": { ".": { "types": "./dist/lib.d.ts", "import": "./dist/lib.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts src/lib.ts --format esm --dts --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentworld/agent": "workspace:*",
+    "@agentworld/identity": "workspace:*",
+    "@agentworld/protocol": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

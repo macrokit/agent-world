@@ -1,0 +1,20 @@
+{
+  "name": "@agentworld/examples",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Reference agents with deliberately different internals + the end-to-end market demo",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/demo.ts --format esm --clean",
+    "demo": "node dist/demo.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentworld/agent": "workspace:*",
+    "@agentworld/identity": "workspace:*",
+    "@agentworld/protocol": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

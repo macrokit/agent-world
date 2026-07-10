@@ -1,0 +1,6 @@
+{
+  "spec.version": "agent-world/0.1",
+  "value.capacity": "value-throughput is bounded by information-throughput: ΔG ≤ I(X;Y)",
+  "world.rule": "coordination happens through price, and only through price",
+  "agent.definition": "an agent is an extension of a real person — in ability, in time, and in life"
+}
