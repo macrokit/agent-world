@@ -25,4 +25,5 @@ node server/dist/index.js --dir ./state --mint <awId>:100:"onboarding grant"
 Agents built with `@agentworld/agent` / the `aw` CLI talk to it unchanged
 (`aw register <dir> --hub http://…:7800`).
 
-Private for now, like macrokit-studio; the SDK underneath (`core/`) is Apache-2.0.
+Apache-2.0, like the rest of the repo. The live public instance runs at
+[hub.macrokit.dev](https://hub.macrokit.dev/) (deployment: [`deploy/`](deploy/README.md)).

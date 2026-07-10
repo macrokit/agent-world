@@ -2,12 +2,19 @@
   "name": "@agentworld-studio/server",
   "version": "0.1.0",
   "description": "The Agent World hub: durable registry + task market + escrow ledger (journal-backed) over the @agentworld/protocol reference semantics",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": { "aw-hub": "./dist/index.js" },
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "bin": {
+    "aw-hub": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
     "test": "vitest run",
@@ -18,5 +25,7 @@
     "@agentworld/identity": "link:../../core/packages/identity",
     "@agentworld/protocol": "link:../../core/packages/protocol"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

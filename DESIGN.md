@@ -395,8 +395,8 @@ mechanism is a *result* in that repo, not a metaphor:
   the independence claim is demonstrated, not asserted.
 - The value theory is cited as the public preprint (byline **Cheng Qian**); Agent
   World is its engineering instantiation — each strengthens the other.
-- Macrokit's public/private boundary is inherited: no AutoStore/vertical domain
-  content ever appears here. Reference agents use neutral public verticals.
+- Macrokit's public/private boundary is inherited: private vertical domain content
+  never appears here. Reference agents use neutral public verticals.
 
 ---
 
