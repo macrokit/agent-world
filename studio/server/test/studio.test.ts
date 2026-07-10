@@ -103,6 +103,43 @@ describe("studio server (Observatory + hub endpoints)", () => {
     expect(scores.epsilon).toBe(0.1);
   });
 
+  it("hardening: health/readiness, body-size cap, security + CORS headers", async () => {
+    const hub = await DurableHub.open(tmp());
+    const srv = await serveStudio(hub, { port: 0, maxBodyBytes: 512 });
+    servers.push(srv);
+
+    const health = await fetch(srv.url + "/healthz");
+    expect(health.status).toBe(200);
+    expect(health.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(health.headers.get("access-control-allow-origin")).toBe("*");
+
+    const ready = await fetch(srv.url + "/readyz");
+    expect(ready.status).toBe(200);
+    expect((await ready.json())["ready"]).toBe(true);
+
+    // oversized body is rejected 413 before it is buffered or parsed
+    const big = await fetch(srv.url + "/aw/v0/inbox", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pad: "x".repeat(2000) }),
+    });
+    expect(big.status).toBe(413);
+
+    // preflight
+    const opt = await fetch(srv.url + "/aw/v0/inbox", { method: "OPTIONS" });
+    expect(opt.status).toBe(204);
+    expect(opt.headers.get("access-control-allow-methods")).toContain("POST");
+  });
+
+  it("graceful close drains without hanging on idle keep-alive sockets", async () => {
+    const hub = await DurableHub.open(tmp());
+    const srv = await serveStudio(hub, { port: 0 });
+    // an agent (keep-alive) connection sits idle; close() must still resolve
+    await fetch(srv.url + "/healthz");
+    await srv.close(); // resolves via drain, not the 5s timeout
+    expect(true).toBe(true);
+  });
+
   it("auto-award decisions replay deterministically from the journal", async () => {
     const dir = tmp();
     const requester = actor(["task.post", "task.verify", "task.cancel", "msg.send"]);

@@ -1,0 +1,36 @@
+# systemd unit for the Agent World hub (bare-metal / VM path, no Docker).
+#
+#   sudo cp aw-hub.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now aw-hub
+#
+# Assumes the repo is deployed to /opt/agent-world and built (pnpm -r build).
+[Unit]
+Description=Agent World hub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aw
+Group=aw
+WorkingDirectory=/opt/agent-world
+# Bind to localhost; nginx terminates TLS and proxies in.
+Environment=AW_HUB_HOST=127.0.0.1
+Environment=AW_HUB_PORT=7800
+ExecStart=/usr/bin/node studio/server/dist/index.js --dir /var/lib/agent-world --host 127.0.0.1 --port 7800
+Restart=on-failure
+RestartSec=2
+# Graceful drain: the process handles SIGTERM (drains, then exits 0).
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/agent-world
+StateDirectory=agent-world
+
+[Install]
+WantedBy=multi-user.target

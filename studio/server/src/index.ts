@@ -38,13 +38,31 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  const port = Number(flag(argv, "port") ?? 7800);
-  const served = await serveStudio(hub, port);
+  const port = Number(flag(argv, "port") ?? process.env["AW_HUB_PORT"] ?? 7800);
+  // Behind a reverse proxy by default; --host 0.0.0.0 for containers.
+  const host = flag(argv, "host") ?? process.env["AW_HUB_HOST"] ?? "127.0.0.1";
+  const served = await serveStudio(hub, {
+    port,
+    host,
+    log: (e) => console.log(`${e.ip} ${e.method} ${e.path} ${e.status} ${e.ms}ms`),
+  });
   console.log(`aw-hub ${hub.id}`);
   console.log(`  inbox:       ${served.url}/aw/v0/inbox`);
   console.log(`  observatory: ${served.url}/`);
+  console.log(`  health:      ${served.url}/healthz  ·  ${served.url}/readyz`);
   console.log(`  state:       ${hub.dir}`);
   console.log(`  totals:      ${JSON.stringify(hub.totals())}`);
+
+  // Graceful shutdown: drain in-flight requests, then exit (systemd/Docker SIGTERM).
+  let closing = false;
+  for (const sig of ["SIGTERM", "SIGINT"] as const) {
+    process.on(sig, () => {
+      if (closing) return;
+      closing = true;
+      console.log(`\n${sig} — draining…`);
+      void served.close().then(() => process.exit(0));
+    });
+  }
 }
 
 // Run as CLI only (not on library import)

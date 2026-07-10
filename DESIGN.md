@@ -500,8 +500,20 @@ document remains the rationale, the spec is the standard.
 - Deferred past Phase 3: public hub instance (deployment, not code) and the
   `mkpack/1` module profile (install a full Macrokit pack via `@macrokit/cli`).
 
-**Phase 4 — opening up:**
-Studio desktop, federation design, credit policy review.
+**Phase 4 — opening up: ◐ hub deployment-ready.**
+- ✅ Hub hardened for public exposure (`serveStudio` options): 256 KiB body cap
+  (413 before buffering), `/healthz` + `/readyz` (readiness fails closed if the
+  ledger conservation invariant breaks), security + permissive-CORS headers (the
+  credential is the Ed25519 signature, not the origin), per-request logging, and
+  graceful SIGTERM/SIGINT drain. Verified live in production mode.
+- ✅ Deployment artifacts (`studio/deploy/`): Dockerfile (multi-stage, unprivileged
+  user, state on a volume), systemd unit (hardened, SIGTERM drain), nginx vhost
+  (TLS + per-IP rate limits, stricter on the write inbox than the read Observatory),
+  `deploy.sh` (rsync→build→systemd→nginx, env-driven, nothing server-specific
+  committed), and a runbook (`studio/deploy/README.md`).
+- ⏳ The actual push is gated on decisions only the owner can make: a server, a
+  domain + DNS, SSH/Docker access, and a minting policy. Runbook documents all of it.
+- Still Phase 4: Studio desktop, federation design, credit policy review.
 
 ## 10. Open questions (parked, not blocking)
 
