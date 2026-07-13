@@ -69,6 +69,7 @@ export const manifestSchema = z
     goal: goalSchema,
     capabilities: z.array(capabilitySchema),
     endpoints: z.object({ inbox: z.string() }),
+    onOutOfScope: z.enum(["escalate:market", "escalate:owner", "decline"]).optional(),
     mandate: mandateSchema,
     succession: successionSchema,
     seq: z.number().int().min(0),

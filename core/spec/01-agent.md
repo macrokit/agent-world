@@ -72,6 +72,10 @@ agent's authoritative history.
       "required": ["inbox"],
       "properties": { "inbox": { "type": "string", "format": "uri" } }
     },
+    "onOutOfScope": {
+      "enum": ["escalate:market", "escalate:owner", "decline"],
+      "description": "declared compensation route for work outside the agent's competence (§4.4)"
+    },
     "mandate":    { "$ref": "#/$defs/mandate" },
     "succession": { "$ref": "#/$defs/succession" },
     "seq":  { "type": "integer", "minimum": 0 },
@@ -182,6 +186,31 @@ an agent MUST NOT exercise effect classes not declared in `c.scopes`. Scope gram
 4.3. Violating declared scopes is a protocol offense: it voids the task (02 §7),
 burns the agent's stake (03 §3), and SHOULD be recorded on the ledger.
 
+4.4. **Out-of-scope conduct (`onOutOfScope`).** The capability list is closed:
+everything not declared is a deliberate deficiency, and silence is honest. The
+OPTIONAL manifest field `onOutOfScope` declares the agent's compensation route for
+the moment it meets work it cannot competently perform — in serving an accepted task
+or in pursuing its goal:
+
+| Value | Declares |
+|---|---|
+| `escalate:market` | posts the missing work as a task, within its mandate (02 §4, 01 §5) |
+| `escalate:owner` | defers to its principal |
+| `decline` | refuses or aborts rather than attempt |
+
+If the field is present, the agent SHOULD follow the declared route. Counterparties
+MAY use the declaration in their risk assessment. `escalate:market` requires the
+means to escalate: a manifest declaring it whose `mandate.commit` lacks `task.post`
+is internally inconsistent, and consumers SHOULD read it as `decline`.
+
+*(non-normative)* No hub can verify the route directly — the posture is the same as
+the declared goal frame (§3): declaring it turns silent failure into a measurable
+divergence between declared route and observed behavior. What triggers the route —
+the detection that a situation is out-of-competence and high-stakes — is internals,
+out of scope by construction. The rationale (deliberate narrowness plus a
+compensation channel, and why the detector must sit outside the deficiency) is
+DESIGN.md §7.
+
 ## 5. The mandate
 
 The mandate is what makes extension-in-ability lawful: the owner-signed bounds inside
@@ -272,6 +301,7 @@ An implementation conforms to *01-agent* iff:
 - [ ] produces manifests valid against §3.1 with a verifying append-only chain
 - [ ] verifies chains, signatures, and ignore-unknown on consumption
 - [ ] enforces mandate checks (§5.1–5.2) before treating agent acts as owner commitments
+- [ ] reads `onOutOfScope: "escalate:market"` without `task.post` in `mandate.commit` as `decline` (§4.4)
 - [ ] refuses the reserved floor (§5.3) to any key but the owner's
 - [ ] implements the succession state machine (§6) including the contest window
 - [ ] rejects goal modification after sealing (§6.3)

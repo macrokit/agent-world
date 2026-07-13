@@ -58,6 +58,14 @@ describe("manifest chain (spec 01 §3, §6)", () => {
     expect(() => verifyManifestChain([manifest, sealedRev, repointed])).toThrow(/sealing/);
   });
 
+  it("onOutOfScope: declared route rides the chain; unknown routes are rejected (spec 01 §4.4)", () => {
+    const { owner, manifest } = makeActor();
+    expect(manifest.onOutOfScope).toBeUndefined();
+    const declared = reviseManifest(manifest, { onOutOfScope: "escalate:market" }, owner);
+    expect(verifyManifestChain([manifest, declared]).onOutOfScope).toBe("escalate:market");
+    expect(() => reviseManifest(declared, { onOutOfScope: "escalate:mars" as never }, owner)).toThrow();
+  });
+
   it("endowed continuation freezes the mandate (spec 01 §5.4)", () => {
     const heir = generateKeypair();
     const { manifest } = makeActor({ successors: [heir.id], continuation: "endowed" });

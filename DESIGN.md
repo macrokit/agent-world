@@ -60,7 +60,7 @@ standard must record not only *what the agent can do* (capabilities) but *what i
 commit on its person's behalf* (the mandate, §3). Extension-in-ability without a
 bounded mandate is impersonation.
 
-This purpose also sets the ethical bar (§8): the people trusting agents with their
+This purpose also sets the ethical bar (§9): the people trusting agents with their
 legacy are, by construction, often elderly and vulnerable. A platform that mediates
 hope and inheritance has a fiduciary posture or it is predatory.
 
@@ -174,6 +174,7 @@ An agent is: **a keypair, a signed manifest, and an inbox.** Nothing else is req
     }
   ],
   "endpoints": { "inbox": "https://..." },
+  "onOutOfScope": "escalate:market",       // declared compensation route (§7); optional
   "mandate": {                            // what it may COMMIT on its person's behalf
     "spend": { "perTask": 20, "perMonth": 200, "currency": "credit" },
     "commit": ["task.post", "task.bid"],  // acts it may sign in the owner's name
@@ -196,12 +197,17 @@ Design positions:
   Accountability chains to a human principal — abusive fleets are cut at the owner.
 - **A capability is a typed task class**: name + intent + I/O schemas + scopes +
   price. It says *what* the agent does and what it touches — never *how*. (A Macrokit
-  macro maps onto this 1:1, which is why the adapter in §7 is thin — but so does a
+  macro maps onto this 1:1, which is why the adapter in §8 is thin — but so does a
   FastAPI endpoint or a human specialist.)
 - **The goal frame is declared.** The platform can't verify a goal statement, but
   declaring it makes alignment accounting possible (§6) and turns deception into a
   *measurable* divergence between declared frame and observed behavior, rather than an
   invisible one.
+- **Deficiency is declared by silence; the compensation route by `onOutOfScope`.**
+  The capability list is closed — everything not listed is a deliberate deficiency
+  (§7). The optional `onOutOfScope` field (`escalate:market` | `escalate:owner` |
+  `decline`) tells counterparties *that* a tripwire route exists when the agent
+  meets work outside its competence, never how it is implemented.
 - **No model-tier field, no internals disclosure.** Earlier drafts declared the
   agent's model; dropped — it leaks internals the standard has no business seeing, and
   reputation must rest on *measured* capability (§6), never on claimed machinery.
@@ -375,7 +381,94 @@ mechanism is a *result* in that repo, not a metaphor:
 
 ---
 
-## 7. Relationship to Macrokit (sibling, not substrate)
+## 7. Removable defects — deficiency by design
+
+A design principle, named late but latent from the start: **there is a class of
+deficiency that can be artificially compensated for. Because in most situations the
+deficiency is non-fatal, it is a net benefit — it reduces noise, concentrates
+capability, and raises output in the chosen area. If, in the rare fatal situation,
+the deficiency is compensated through an external channel, the deficiency is an
+overall advantage.** Call such a flaw a **removable defect**: kept deliberately
+because it pays, removable on demand because the compensation channel is owned. An
+agent built this way is *intermittently flawed by design*, running two personas:
+
+- **Persona A — the specialist.** Deliberately deficient: ignores most of the world,
+  holds a narrow, deep competence, produces at a rate a generalist cannot match.
+- **Persona B — the guardian.** Does not do the work. Its single competence is
+  *knowing the boundary of Persona A*: detecting that the current situation is
+  (a) outside A's competence and (b) high-stakes, and routing to a compensation
+  channel instead of letting A act.
+
+"Removable" means the removal is an owned, bounded mechanism — not luck: the defect
+can be taken out of the loop the moment it would be fatal, and *only* then — the
+rest of the time it is kept, because it is what the agent's edge is made of. The
+flaw is a feature *only because* the compensation channel exists and the tripwire
+works.
+
+Most of this the design already carries; the principle explains why those pieces are
+the right shape:
+
+1. **The deficiency is the specialization the theory prices.** Docs 04/06: diversity
+   is worth paying for, redundancy is worth zero; a narrow agent with high Î on one
+   class beats a diluted generalist. The manifest expresses deficiency honestly —
+   capabilities are a positive, closed list, and silence is the deficiency.
+2. **Dissipation punishes the *unremovable* defect — ex post.** Docs
+   06/09 R2: confident error drives growth negative; overclaimers burn stake and go
+   broke. This principle is the ex-ante architecture that avoids the punishment:
+   Persona B fires *before* the out-of-competence act, so the overclaiming bid is
+   never made. Calibration (confidence-scaled staking) is Persona B's
+   boundary-visible shadow.
+3. **The compensation channels exist at the boundary**, in rising order of cost:
+   escalate to the market (post the missing work — or buy a capability module and
+   convert the deficiency into a capability permanently, the escalation-market
+   flagship of §8 and removal in the strongest sense: the defect *becomes* a
+   capability); escalate to the owner (the mandate's reserved list is exactly
+   "acts Persona A must never take"); rent judgment (staked-review); the guardian
+   (for the orphaned agent).
+4. **The economics close.** The specialist pays for its tail *per event*; the
+   generalist pays *always*. **Advantage condition:** specialization gain per period
+   > fatal-event frequency × market price of compensation — both sides measurable on
+   the hub (Î × prices vs. observed escalation spend). An agent's choice to be
+   deficient is a computable economic position, and the Observatory should show it
+   honestly, next to earnings.
+
+The one genuinely new constraint, **load-bearing**: **the deficiency must never
+include the detector.** A flaw that prevents *recognizing* the fatal situation is not
+removable — the compensation channel is unreachable exactly when needed. So noise
+reduction may apply to action-competence (Persona A arbitrarily narrow), never to
+risk perception (Persona B cheap, general, always-on). Detection never has to *solve*
+the out-of-frame situation, only notice it and route — orders of magnitude cheaper
+than competence, which is what makes the architecture affordable. This mirrors the
+theory's is/ought asymmetry: beliefs must keep updating even where the frame need
+not — *perception stays open even when action is narrow.* An agent may be deficient
+in what it can do, never in noticing what it cannot.
+
+The sealed-frame agent is the extreme case: the seal is a *permanent*
+deficiency-as-feature (heirs cannot repoint the frame; most days it costs nothing),
+the fatal situation is drift (the world changes until the frame's literal reading
+betrays its intent — open question 9), and the guardian/interpretation machinery is
+Persona B. Removal here never means unsealing — the seal is forever; it means the
+guardian machinery compensating the seal's fatal case. Succession design *is*
+removable-defect design; evaluate every succession feature against that pairing.
+
+Boundary footprint (the standard never sees the personas — internals are out of
+scope): narrow capabilities, mandate ceilings, reserved lists, escalation via
+`task.post`, staked-review, and guardians already carry the pattern. The one
+addition is the optional manifest field `onOutOfScope` (spec 01 §4.4) — declaring
+*that* a compensation route exists (`escalate:market` / `escalate:owner` /
+`decline`) without ever showing how it is implemented; same
+declared-but-behaviorally-measurable posture as the goal frame.
+
+Honest caveats: fatal-event frequency is estimated from history, and tail events are
+precisely what history underestimates — the mitigation is the detector constraint
+plus mandate ceilings bounding blast radius, not the statistics. And the framing is
+about *competence*, not values: both personas serve one declared frame. Two personas
+serving different frames is not this pattern — it is undeclared misalignment, and
+spec 03 §8 applies against it.
+
+---
+
+## 8. Relationship to Macrokit (sibling, not substrate)
 
 - `agent-world/core` has **zero** `@macrokit/*` dependencies. The standard must be
   provably runtime-agnostic; the cleanest proof is a dependency graph.
@@ -400,7 +493,7 @@ mechanism is a *result* in that repo, not a metaphor:
 
 ---
 
-## 8. Trust & safety floor (v0, non-negotiable)
+## 9. Trust & safety floor (v0, non-negotiable)
 
 - **Signed everything**: manifests by owners, messages by agents; the hub verifies,
   never mints identity.
@@ -428,7 +521,7 @@ mechanism is a *result* in that repo, not a metaphor:
 
 ---
 
-## 9. Build order
+## 10. Build order
 
 **Phase 0 — the standard (docs before code, thin): ✅ drafted.**
 [`core/spec/01-agent.md`](core/spec/01-agent.md),
@@ -524,7 +617,7 @@ document remains the rationale, the spec is the standard.
 - Still Phase 4: Studio desktop, federation design, credit→real-money policy. The
   hub minting policy is now a live per-agent grant; revisit before scaling.
 
-## 10. Open questions (parked, not blocking)
+## 11. Open questions (parked, not blocking)
 
 1. Naming/branding: `agent-world` standalone vs. under an org; decide before public.
 2. Credits → real money / chain settlement: after mechanics prove out.

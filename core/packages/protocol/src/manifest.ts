@@ -9,6 +9,7 @@ export interface CreateManifestFields {
   goal: Manifest["goal"];
   capabilities: Manifest["capabilities"];
   endpoints: Manifest["endpoints"];
+  onOutOfScope?: Manifest["onOutOfScope"];
   mandate: Manifest["mandate"];
   succession: Manifest["succession"];
 }
